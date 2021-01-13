@@ -1,0 +1,7 @@
+add_subdirectory(addon)
+add_subdirectory(common)
+add_subdirectory(frontend)
+add_subdirectory(imgui)
+add_subdirectory(retro)
+add_subdirectory(sdl)
+add_subdirectory(stb)
