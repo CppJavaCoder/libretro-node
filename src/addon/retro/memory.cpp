@@ -87,7 +87,8 @@ Napi::Value RDRAMReadBuffer(const Napi::CallbackInfo& info)
     auto len = AsU32(info[1]);
     auto buf = GetCore().RDRAMReadBuffer(AsU32(info[0]), len);
     auto ret = Napi::Buffer<u8>::Copy(info.Env(), buf, len);
-    std::free(buf);
+    delete [] buf;
+    buf = nullptr;
 
     return ret;
 }
@@ -162,9 +163,10 @@ Napi::Value ROMReadS32(const Napi::CallbackInfo& info)
 Napi::Value ROMReadBuffer(const Napi::CallbackInfo& info)
 {
     auto len = AsU32(info[1]);
-    auto buf = GetCore().ROMReadBuffer(AsU32(info[0]), len);
+    u8 *buf = GetCore().ROMReadBuffer(AsU32(info[0]), len);
     auto ret = Napi::Buffer<u8>::Copy(info.Env(), buf, len);
-    std::free(buf);
+    delete [] buf;
+    buf = nullptr;
 
     return ret;
 }

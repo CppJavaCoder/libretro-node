@@ -46,6 +46,7 @@ struct keymap {
 	unsigned rk;
 };
 
+/*
 static struct keymap g_binds[] = {
     { SDL_SCANCODE_X, RETRO_DEVICE_ID_JOYPAD_A },
     { SDL_SCANCODE_Z, RETRO_DEVICE_ID_JOYPAD_B },
@@ -60,7 +61,7 @@ static struct keymap g_binds[] = {
     { SDL_SCANCODE_Q, RETRO_DEVICE_ID_JOYPAD_L },
     { SDL_SCANCODE_W, RETRO_DEVICE_ID_JOYPAD_R },
     { 0, 0 }
-};
+};*/
 
 static unsigned g_joy[RETRO_DEVICE_ID_JOYPAD_R3+1] = { 0 };
 
@@ -99,8 +100,9 @@ static bool video_set_pixel_format(unsigned format) {
 static void video_refresh(const void *data, unsigned width, unsigned height, unsigned pitch) {
     if (data && data != RETRO_HW_FRAME_BUFFER_VALID) {
         SDL_UpdateTexture(g_txt,NULL,(void*)data,pitch);
+        Frontend::App::GetInstance().SwapHandler();
+        Frontend::App::GetInstance().NewFrameHandler();
 	}
-    Frontend::App::GetInstance().OnViUpdate.fire();
 }
 
 static void audio_init(int frequency) {
@@ -174,6 +176,26 @@ static void core_log(enum retro_log_level level, const char *fmt, ...) {
 
 static bool core_environment(unsigned cmd, void *data) {
 	switch (cmd) {
+    case RETRO_ENVIRONMENT_SET_SUBSYSTEM_INFO: {
+        const struct retro_subsystem_info *inf = (const struct retro_subsystem_info *)data;
+        Logger::Log(LogCategory::Info,"Core Env",std::string("Desc ")+inf->desc);
+        Logger::Log(LogCategory::Info,"Core Env",std::string("ID ")+std::to_string(inf->id));
+        Logger::Log(LogCategory::Info,"Core Env",std::string("Ident ")+inf->ident);
+        Logger::Log(LogCategory::Info,"Core Env",std::string("Num Roms ")+std::to_string(inf->num_roms));
+        const struct retro_subsystem_rom_info *rom_inf = inf->roms;
+        Logger::Log(LogCategory::Info,"Core Env",std::string("ROM info block extract ")+(rom_inf->block_extract ? "True" : "False"));
+        Logger::Log(LogCategory::Info,"Core Env",std::string("ROM info desc ")+rom_inf->desc);
+        const struct retro_subsystem_memory_info *mem_inf = rom_inf->memory;
+        Logger::Log(LogCategory::Info,"Core Env",std::string("ROM info need fullpath ")+(rom_inf->need_fullpath ? "True" : "False"));
+        Logger::Log(LogCategory::Info,"Core Env",std::string("ROM info num memory ")+std::to_string(rom_inf->num_memory));
+        Logger::Log(LogCategory::Info,"Core Env",std::string("Rom info required")+(rom_inf->required ? "True" : "False"));
+        Logger::Log(LogCategory::Info,"Core Env",std::string("ROM info valid extentions ")+rom_inf->valid_extensions);
+
+        Logger::Log(LogCategory::Info,"Core Env",std::string("ROM memory info extentions ")+mem_inf->extension);
+        Logger::Log(LogCategory::Info,"Core Env",std::string("ROM memory info type ")+std::to_string(mem_inf->type));
+
+        return true;
+    }
     case RETRO_ENVIRONMENT_SET_VARIABLES: {
         const struct retro_variable *vars = (const struct retro_variable *)data;
         size_t num_vars = 0;
@@ -303,10 +325,18 @@ static void core_video_refresh(const void *data, unsigned width, unsigned height
 
 static void core_input_poll(void) {
 	int i;
-	g_kbd = SDL_GetKeyboardState(NULL);
+    g_kbd = SDL_GetKeyboardState(NULL);
 
-	for (i = 0; g_binds[i].k || g_binds[i].rk; ++i)
-        g_joy[g_binds[i].rk] = g_kbd[g_binds[i].k];
+    //g_binds[0].k = Frontend::App::GetInstance().GetInput().GetButton(0,0);
+    for(int n = 0; n < RETRO_DEVICE_ID_JOYPAD_R3-1;n++)
+        Frontend::App::GetInstance().GetInput().SetButton(0,n,true);
+
+	for (i = 0; i < RETRO_DEVICE_ID_JOYPAD_R3-1; i++)
+    {
+        g_joy[i] = Frontend::App::GetInstance().GetInput().GetButton(0,i);
+        if(g_joy[i])
+            Logger::Log(LogCategory::Info,"Ctrl","g_joy " + std::to_string(i));
+    }
 
     if (g_kbd[SDL_SCANCODE_ESCAPE])
     {
@@ -391,6 +421,8 @@ void App::InitVideo(const StartInfo& info)
     m_fonts.base = font_atlas->AddFontFromMemoryCompressedTTF(DroidSans_compressed_data, DroidSans_compressed_size, 18);
     m_fonts.mono = font_atlas->AddFontFromMemoryCompressedTTF(DroidSansMono_compressed_data, DroidSansMono_compressed_size, 18);
     m_video.imgui.RebuildFontAtlas();
+
+    Frontend::App::GetInstance().NewVIHandler();
 }
 
 void App::DeinitVideo()
@@ -460,9 +492,10 @@ struct AppCallbacks {
 
 void App::InitEmu(const StartInfo& info)
 {
-    Logger::Log(LogCategory::Debug, "Joe's debug", "InitEmu");
+    Logger::Log(LogCategory::Debug, "Joe's debug", std::string("InitEmu ") + std::string(info.retrolib.generic_string() + ".dll").c_str());
 
-    m_emu.core.LoadCore(info.retrolib.c_str());
+    m_emu.core.LoadCore(std::string(info.retrolib.generic_string() + ".dll").c_str());
+    m_emu.core.Startup(info.config_dir,info.data_dir);
 
     m_emu.core.SetEnvironment(core_environment);
     m_emu.core.SetVideoRefresh(core_video_refresh);
@@ -531,12 +564,12 @@ void App::DoEvents()
 				}
             }
 //          Is for Mupen
-            else if (!m_any_item_active && e.key.windowID == m_video.window.GetId() && m_video.window.HasInputFocus()) {
-                if (e.type == SDL_KEYDOWN)
-                    ;//m_emu.core.InputKeyDown(e.key.keysym.mod, e.key.keysym.scancode);
-                else if (e.type == SDL_KEYUP)
-                    ;//m_emu.core.InputKeyUp(e.key.keysym.mod, e.key.keysym.scancode);
-            }
+//            else if (!m_any_item_active && e.key.windowID == m_video.window.GetId() && m_video.window.HasInputFocus()) {
+//                if (e.type == SDL_KEYDOWN)
+//                    ;//m_emu.core.InputKeyDown(e.key.keysym.mod, e.key.keysym.scancode);
+//                else if (e.type == SDL_KEYUP)
+//                    ;//m_emu.core.InputKeyUp(e.key.keysym.mod, e.key.keysym.scancode);
+//            }
         }
 
         if (m_util_win.input_conf)
@@ -555,14 +588,14 @@ void App::LoadCheats()
     };
 
     try {
-        m_cheats.map = RETRO::Cheat::Load(m_emu.data_dir / "mupencheat.txt");
+        m_cheats.map = RETRO::Cheat::Load(m_emu.data_dir / "libretrocheat.txt");
     }
     catch (const std::exception& e) {
         Logger::Log(LogCategory::Warn, "Retro frontend", fmt::format("Cheats not loaded. {}", e.what()));
     }
 
     try {
-        m_cheats.user_map = RETRO::Cheat::Load(m_emu.data_dir / "mupencheat_user.txt");
+        m_cheats.user_map = RETRO::Cheat::Load(m_emu.data_dir / "libretro_user.txt");
     }
     catch (const std::exception& e) {
         Logger::Log(LogCategory::Warn, "Retro frontend", fmt::format("User cheats not loaded. {}", e.what()));
@@ -578,7 +611,7 @@ void App::SaveCheats()
 {
     Logger::Log(LogCategory::Debug, "Joe's debug", "SaveCheats");
     try {
-        RETRO::Cheat::Save(m_emu.data_dir / "mupencheat_user.txt", m_cheats.user_map);
+        RETRO::Cheat::Save(m_emu.data_dir / "libretro_user.txt", m_cheats.user_map);
     }
     catch (const std::exception& e) {
         Logger::Log(LogCategory::Error, "Retro frontend", fmt::format("User cheats not saved. {}", e.what()));
@@ -589,14 +622,16 @@ void App::LoadROMCheats()
 {
     Logger::Log(LogCategory::Debug, "Joe's debug", "LoadROMCheats");
     // Yet to be implemented
-    /*
-    m64p_rom_header header;
-    m_emu.core.GetROMHeader(&header);
-    m64p_rom_settings settings;
-    m_emu.core.GetROMSettings(&settings);
+    
+    RETRO::Core::RetroHeader header;
+    m_emu.core.GetRetroHeader(&header);
+    //m64p_rom_settings settings;
+    //m_emu.core.GetROMSettings(&settings);
 
-    auto crc = !m_cheats.crc.empty() ? m_cheats.crc :
-        fmt::format("{:08X}-{:08X}-C:{:02X}", SDL_Swap32(header.CRC1), SDL_Swap32(header.CRC2), header.Country_code & 0xff);
+    //auto crc = !m_cheats.crc.empty() ? m_cheats.crc :
+        //fmt::format("{:08X}-{:08X}-C:{:02X}", "CRC1", "CRC2", 0xff/*header.Country_code & 0xff*/);
+
+    std::string crc = "Zelda";
 
     if (auto it = m_cheats.map.find(crc); it != m_cheats.map.end()) {
         m_cheats.block = &it->second;
@@ -604,7 +639,7 @@ void App::LoadROMCheats()
     else {
         m_cheats.block = &m_cheats.map[crc];
         m_cheats.block->crc = crc;
-        m_cheats.block->good_name = settings.goodname;
+        m_cheats.block->good_name = "Zelda";
     }
 
     if (auto it = m_cheats.user_map.find(crc); it != m_cheats.user_map.end()) {
@@ -613,8 +648,8 @@ void App::LoadROMCheats()
     else {
         m_cheats.user_block = &m_cheats.user_map[crc];
         m_cheats.user_block->crc = crc;
-        m_cheats.user_block->good_name = settings.goodname;
-    }*/
+        m_cheats.user_block->good_name = "Zelda";
+    }
 }
 
 void App::InitUtilWindows()
@@ -682,8 +717,7 @@ void App::Startup(const StartInfo& info)
     CoreStartedHandler();
     LoadCheats();
 
-
-        m_create_res_next = true;
+        CreateResourcesNextVi();
 
         // Update the game loop timer.
         if (runloop_frame_time.callback) {
@@ -720,7 +754,6 @@ void App::Execute()
         ImGuiSDL::Initialize(g_rnd,inf.window_width,inf.window_height);
         while(running){
             m_emu.core.Run();
-            NewFrameHandler();
         }
         ImGuiSDL::Deinitialize();
         CoreStoppedHandler();
@@ -1036,7 +1069,7 @@ void App::CoreStoppedHandler()
 void App::CreateResourcesHandler()
 {
     Logger::Log(LogCategory::Debug, "Joe's debug", "CreateResourcesHandler");
-    auto bound_tex = Gfx::Texture::GetCurrentBound();
+    //auto bound_tex = Gfx::Texture::GetCurrentBound();
     //SDL::GLContext::MakeCurrentNone();
 
     OnCreateResources.fire();
@@ -1053,7 +1086,7 @@ void App::NewFrameHandler()
 
 void App::NewVIHandler()
 {
-    Logger::Log(LogCategory::Debug, "Joe's debug", "NewVIHandler");
+    //Logger::Log(LogCategory::Debug, "Joe's debug", "NewVIHandler");
     //DestroyTextures();
 
     //Crashes
@@ -1074,7 +1107,7 @@ void App::NewVIHandler()
     }*/
 
     //Not needed atm
-    m_input.Update(m_emu.core);
+    m_input.Update(GetCore());
     OnNewVI.fire();
 }
 
@@ -1131,8 +1164,8 @@ void App::DebugUpdateHandler(unsigned pc)
 
 void App::SwapHandler()
 {
-    Logger::Log(LogCategory::Debug, "Joe's debug", "SwapHandler");
-    auto bound_tex = Gfx::Texture::GetCurrentBound();
+    //Logger::Log(LogCategory::Debug, "Joe's debug", "SwapHandler");
+    //auto bound_tex = Gfx::Texture::GetCurrentBound();
     //SDL::GLContext::MakeCurrentNone();
 
     OnViUpdate.fire();
@@ -1141,7 +1174,7 @@ void App::SwapHandler()
     //m_video.gl_context.MakeCurrent(m_video.window);
 
     //glBindTexture(GL_TEXTURE_2D, bound_tex > 0 ? bound_tex : 0);
-    UpdateVideoOutputSize();
+    //UpdateVideoOutputSize();
 }
 
 std::filesystem::path App::GetScreenshotPath()

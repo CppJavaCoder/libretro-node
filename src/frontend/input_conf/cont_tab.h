@@ -16,13 +16,13 @@ class ContTab
 {
 public:
 	ContTab(int cont_index);
-/*
+
     void LoadConfig(RETRO::Core& core);
     void SaveConfig(RETRO::Core& core);
 	void DoEvent(const SDL_Event& e, bool focused);
 	void Show();
 
-private:*/
+private:
 	int m_cont_index{};
 	std::vector<std::string> m_devices;
 	int m_device_index{};
@@ -37,17 +37,17 @@ private:*/
 	MapUtil::MapIndex m_map_index{ MapUtil::MapIndex_None };
 	MapUtil::MapEvent m_prev_map{};
 	bool m_key_map{};
-/*
+
     void RememberDevice(int device_index, const std::string& device_name);
-    void AdvanceMapIndex();*/
-	void UpdateDeviceList();/*
+    void AdvanceMapIndex();
+	void UpdateDeviceList();
 	void UpdateDeviceIndex(std::string device_name);
 	void UpdateDeviceListAndIndex();
 	void OpenDeviceIndex(int device_index);
 	void ShowDevicesCombo();
 	void ShowPluginsCombo();
 	void ShowMapButtons(MapUtil::MapIndex* next, MapUtil::MapIndex min, MapUtil::MapIndex max, bool axis_mismatch_check = false);
-    void AxisStepCheck();*/
+    void AxisStepCheck();
 };
 
 }

@@ -1,5 +1,7 @@
 #include "addon/retro/retro.h"
 #include "addon/retro/memory.h"
+#include "addon/retro/config.h"
+#include "addon/retro/input.h"
 #include "addon/safe_call.h"
 #include "addon/param.h"
 #include "frontend/app.h"
@@ -54,15 +56,38 @@ Napi::Value GetSystemInfo(const Napi::CallbackInfo& info)
     return SafeCall(info.Env(), [&info]() {
         retro_system_info *inf;
         Frontend::App::GetInstance().GetCore().GetSystemInfo(inf);
-        return FromPtr(info.Env(),(void*)inf);
+
+        auto ret = Napi::Object::New(info.Env());
+	    ret.Set("blockExtract", FromBool(info.Env(), inf->block_extract));
+	    ret.Set("libraryName", FromStrUtf8(info.Env(), inf->library_name));
+	    ret.Set("libraryVersion", FromStrUtf8(info.Env(),inf->library_version));
+	    ret.Set("needFullpath", FromBool(info.Env(), inf->need_fullpath));
+	    ret.Set("validExtentions", FromStrUtf8(info.Env(), inf->valid_extensions));
+
+        return ret;
     });
 }
 Napi::Value GetSystemAvInfo(const Napi::CallbackInfo& info)
 {
     return SafeCall(info.Env(), [&info]() {
         retro_system_av_info *inf;
-        Frontend::App::GetInstance().GetCore().GetSystemAvInfo(inf);
-        return FromPtr(info.Env(),(void*)inf);
+        
+        auto geo = Napi::Object::New(info.Env());
+        geo.Set("aspectRatio",FromF32(info.Env(),inf->geometry.aspect_ratio));
+        geo.Set("baseWidth",FromF32(info.Env(),inf->geometry.base_width));
+        geo.Set("baseHeight",FromF32(info.Env(),inf->geometry.base_height));
+        geo.Set("maxWidth",FromF32(info.Env(),inf->geometry.max_width));
+        geo.Set("maxHeight",FromU32(info.Env(),inf->geometry.max_height));
+
+        auto timing = Napi::Object::New(info.Env());
+        timing.Set("fps",FromF64(info.Env(),inf->timing.fps));
+        timing.Set("sampleRate",FromF64(info.Env(),inf->timing.sample_rate));
+        
+        auto ret = Napi::Object::New(info.Env());
+        ret.Set("geometry",geo);
+        ret.Set("timing",timing);
+
+        return ret;
     });
 }
 Napi::Value SetControllerPortDevice(const Napi::CallbackInfo& info)
@@ -218,12 +243,21 @@ Napi::Value AdvanceFrame(const Napi::CallbackInfo& info)
 Napi::Value GetGameInfo(const Napi::CallbackInfo& info)
 {
     return SafeCall(info.Env(), [&info]() {
-        return FromPtr(info.Env(),(void*)Frontend::App::GetInstance().GetCore().GetGameInfo());
+        retro_game_info gInf = *Frontend::App::GetInstance().GetCore().GetGameInfo();
+
+        auto ret = Napi::Object::New(info.Env());
+	    ret.Set("path", FromStrUtf8(info.Env(), gInf.path));
+	    ret.Set("data", FromPtr(info.Env(), Frontend::App::GetInstance().GetCore().GetROMPtr()));
+	    ret.Set("size", FromU32(info.Env(),Frontend::App::GetInstance().GetCore().GetROMSize()));
+	    ret.Set("meta", FromStrUtf8(info.Env(), gInf.meta));
+        return ret;
     });
 }
 
 Napi::Object BuildExports(Napi::Env env, Napi::Object exports)
 {
+    exports.Set("Config", Config::BuildExports(env, Napi::Object::New(env)));
+    exports.Set("Input", Config::BuildExports(env, Napi::Object::New(env)));
     exports.Set("Memory", Memory::BuildExports(env, Napi::Object::New(env)));
 
     exports.Set("loadCore", Napi::Function::New(env, LoadCore));

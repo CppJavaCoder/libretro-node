@@ -38,23 +38,23 @@ EventsTab::EventsTab()
 
 void EventsTab::LoadConfig(RETRO::Core& core)
 {
-/*    auto section = core.ConfigOpenSection("CoreEvents");
+    auto section = core.ConfigOpenSection("CoreEvents");
 
     for (int i{}; i < EventIndex_NumEvents; ++i)
         m_kbd_map[i] = ParseKbdEvent(std::to_string(section.GetIntOr(k_conf_labels[i], s_conf_defaults[i])));
 
     for (int i = 0; i < EventIndex_NumEvents; ++i)
-        m_kbd_map_str[i] = FormatKbdEvent(m_kbd_map[i], true);*/
+        m_kbd_map_str[i] = FormatKbdEvent(m_kbd_map[i], true);
 }
 
 void EventsTab::SaveConfig(RETRO::Core& core)
 {
-/*    auto section = core.ConfigOpenSection("CoreEvents");
+    auto section = core.ConfigOpenSection("CoreEvents");
 
     for (int i{}; i < EventIndex_NumEvents; ++i)
         section.SetInt(k_conf_labels[i], GetKbdEventKey(m_kbd_map[i]));
 
-    core.ConfigSaveFile();*/
+    core.ConfigSaveFile();
 }
 
 void EventsTab::DoEvent(const SDL_Event& e)

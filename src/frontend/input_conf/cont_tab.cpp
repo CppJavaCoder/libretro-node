@@ -59,7 +59,7 @@ ContTab::ContTab(int cont_index) :
     m_cont_index{cont_index}
 {
     UpdateDeviceList();
-}/*
+}
 
 void ContTab::LoadConfig(RETRO::Core& core)
 {
@@ -332,7 +332,7 @@ void ContTab::AdvanceMapIndex()
     map(MapIndex_CLeft2, MapIndex_CDown2);
     map(MapIndex_MempakSwitch, MapIndex_RumbleSwitch);
 }
-*/
+
 void ContTab::UpdateDeviceList()
 {
     m_devices.clear();
@@ -340,7 +340,7 @@ void ContTab::UpdateDeviceList()
 
     for (int i{}; i < SDL::Joystick::GetCount(); ++i)
         m_devices.emplace_back(SDL::Joystick::GetNameForIndex(i));
-}/*
+}
 
 void ContTab::UpdateDeviceIndex(std::string device_name)
 {
@@ -550,5 +550,5 @@ void ContTab::AxisStepCheck()
             m_prev_map.type = MapType::None;
     }
 }
-*/
+
 }

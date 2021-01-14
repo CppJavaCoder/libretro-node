@@ -5,6 +5,8 @@
 
 #include <fmt/format.h>
 
+#include <sstream>
+
 //#define LOADFUNC(func) func = m_so.LoadFunction<ptr_##func>(#func)
 
 //Todo, find a C++ way... (I know I'm dumb okay!!!)
@@ -39,6 +41,7 @@ Core::Core() {
     currentGame.size = 0;
     gameSize = 0;
     gameData = nullptr;
+    changes = false;
 }
 
 Core::~Core()
@@ -108,6 +111,14 @@ void Core::Init()
 {
     m_retro.retro_init();
 }
+void Core::Startup(const std::filesystem::path &config,const std::filesystem::path &data)
+{
+    config_dir = config;
+    data_dir = data;
+    if(mfile.is_open())
+        mfile.close();
+    mfile.open(config_dir/".ini");
+}
 void Core::Deinit()
 {
     m_retro.retro_deinit();
@@ -118,25 +129,21 @@ unsigned Core::GetAPIVersion()
 }
 retro_system_info *Core::GetSystemInfo()
 {
-    retro_system_info sys_inf;
     m_retro.retro_get_system_info(&sys_inf);
     return &sys_inf;
 }
 retro_system_av_info *Core::GetSystemAvInfo()
 {
-    retro_system_av_info sys_av_inf;
     m_retro.retro_get_system_av_info(&sys_av_inf);
     return &sys_av_inf;
 }
-retro_system_info *Core::GetSystemInfo(retro_system_info *inf)
+void Core::GetSystemInfo(retro_system_info *inf)
 {
     m_retro.retro_get_system_info(inf);
-    return inf;
 }
-retro_system_av_info *Core::GetSystemAvInfo(retro_system_av_info *inf)
+void Core::GetSystemAvInfo(retro_system_av_info *inf)
 {
     m_retro.retro_get_system_av_info(inf);
-    return inf;
 }
 void Core::SetControllerPortDevice(unsigned port, unsigned device)
 {
@@ -169,6 +176,7 @@ void Core::CheatReset()
 }
 void Core::CheatSet(unsigned index, bool enabled, const char *code)
 {
+    Logger::Log(LogCategory::Debug,std::string("Cheat Code ")+std::to_string(index)+" "+code,std::string("Is ") + (enabled ? "Enabled" : "Disabled"));
     m_retro.retro_cheat_set(index,enabled,code);
 }
 bool Core::LoadGame(const struct retro_game_info *game)
@@ -259,11 +267,11 @@ std::size_t Core::GetDRAMSize()
 }
 u8* Core::GetROMPtr()
 {
-    return (u8*)currentGame.data;
+    return (u8*)gameData;
 }
 std::size_t Core::GetROMSize()
 {
-    return currentGame.size;
+    return gameSize;
 }
 
 u8 Core::RDRAMRead8(u32 addr)
@@ -280,10 +288,10 @@ u32 Core::RDRAMRead32(u32 addr)
 }
 u8* Core::RDRAMReadBuffer(u32 addr, std::size_t len)
 {
-    u8 *dat;
+    u8 *buf = new u8[len];
     for(int n=0;n<len;n++)
-        dat[n] = RDRAMRead8(addr+n);
-    return dat;
+        buf[n] = RDRAMRead8(addr+n);
+    return buf;
 }
 void Core::RDRAMWrite8(u32 addr, u8 val)
 {
@@ -320,11 +328,10 @@ u32 Core::ROMRead32(u32 addr)
 }
 u8* Core::ROMReadBuffer(u32 addr, std::size_t len)
 {
-    u8 *dat;
-    dat = new u8[len];
+    u8 *buf = new u8[len];
     for(int n=0;n<len;n++)
-        dat[n-(len+1)] << gameData[addr+n];
-    return dat;
+        buf[n] = gameData[addr+n];
+    return buf;
 }
 void Core::ROMWrite8(u32 addr, u8 val)
 {
@@ -346,13 +353,14 @@ void Core::ROMWriteBuffer(u32 addr, u8* buf, std::size_t len)
         ROMWrite8(addr+n,buf[n]);
 }
 
-void Core::ContSetInput(u32 button,unsigned int value)
+void Core::ContSetInput(u32 controller,unsigned int value)
 {
-    ctrl_b[button] = value;
+    ctrl_b[controller] = value;
+    Logger::Log(LogCategory::Debug,"CORE CTRL ",std::to_string(value));
 }
-unsigned int Core::ContGetInput(u32 button)
+unsigned int Core::ContGetInput(u32 controller)
 {
-    return ctrl_b[button];
+    return ctrl_b[controller];
 }
 void Core::SetGame(void *data,std::size_t size)
 {
@@ -364,9 +372,32 @@ void Core::SetGame(void *data,std::size_t size)
     gameSize = size;
     gameData = new u8[size];
     gameData = (u8*)data;
-    for(int n=0;n<3;n++)
-        printf("gameData:%c\n",gameData[n]);
 }
 
+std::string Core::GetROMHeader(RetroHeader::System sys)
+{
+    switch(sys)
+    {
+        case RetroHeader::NES:
+
+        break;
+        case RetroHeader::SNES:
+            
+        break;
+        default:
+        break;
+    }
+    return "UNKNOWN";
+}
+void Core::GetRetroHeader(RetroHeader *hdr)
+{
+    //Identify the games system
+    if(hdr == nullptr)
+        return;
+    retro_system_info inf;
+    Core::GetSystemInfo(&inf);
+    
+    hdr->name = GetROMHeader(hdr->sys);
+}
 
 }

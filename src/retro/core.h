@@ -6,6 +6,7 @@
 #include "retro/version.h"
 
 #include <filesystem>
+#include <fstream>
 #include <string>
 #include <vector>
 
@@ -24,12 +25,13 @@ public:
     void *GetHandle() const;
 
     void Init();
+    void Startup(const std::filesystem::path &config,const std::filesystem::path &data);
     void Deinit();
     unsigned GetAPIVersion();
     retro_system_info *GetSystemInfo();
 	retro_system_av_info *GetSystemAvInfo();
-    retro_system_info *GetSystemInfo(retro_system_info *inf);
-	retro_system_av_info *GetSystemAvInfo(retro_system_av_info *inf);
+    void GetSystemInfo(retro_system_info *inf);
+	void GetSystemAvInfo(retro_system_av_info *inf);
 	void SetControllerPortDevice(unsigned port, unsigned device);
 	void Reset(void);
 	void Run(void);
@@ -88,10 +90,84 @@ public:
     void ROMWrite32(u32 addr, u32 val);
     void ROMWriteBuffer(u32 addr, u8* buf, std::size_t len);
 
-    void ContSetInput(u32 button,unsigned int value);
-    unsigned int ContGetInput(u32 button);
+    void ContSetInput(u32 controller,unsigned int value);
+    unsigned int ContGetInput(u32 controller);
 
     void SetGame(void *data,std::size_t size);
+
+    void ConfigSaveFile();
+    bool ConfigHasUnsavedChanges();
+    std::vector<std::string> ConfigListSections();
+
+    struct RetroHeader{
+        enum System
+        {
+            NES, SNES, UNKOWN
+        };
+        System sys;
+        std::string name;
+    };
+
+    std::string GetROMHeader(RetroHeader::System sys);
+    void GetRetroHeader(RetroHeader *hdr);
+
+    class ConfigSection {
+        friend Core;
+
+    public:
+
+        enum RetroType
+        {
+            Int, Float, Bool, String, Unknown
+        };
+
+        struct Param {
+            std::string name, value;
+            RetroType type;
+        };
+
+        std::string GetName();
+        std::vector<Param> ListParams();
+        void Save();
+        bool HasUnsavedChanges();
+        void Erase();
+        void RevertChanges();
+
+        std::string GetHelp(const std::string& name);
+        void SetHelp(const std::string& name, const std::string& help);
+        RetroType GetType(const std::string& name);
+
+        void SetDefaultInt(const std::string& name, int value, const std::string& help = "");
+        void SetDefaultFloat(const std::string& name, float value, const std::string& help = "");
+        void SetDefaultBool(const std::string& name, bool value, const std::string& help = "");
+        void SetDefaultString(const std::string& name, const std::string& value, const std::string& help = "");
+
+        int GetInt(const std::string& name);
+        int GetIntOr(const std::string& name, int value);
+        void SetInt(const std::string& name, int value);
+        float GetFloat(const std::string& name);
+        float GetFloatOr(const std::string& name, float value);
+        void SetFloat(const std::string& name, float value);
+        bool GetBool(const std::string& name);
+        bool GetBoolOr(const std::string& name, bool value);
+        void SetBool(const std::string& name, bool value);
+        std::string GetString(const std::string& name);
+        std::string GetStringOr(const std::string& name, const std::string& value);
+        void SetString(const std::string& name, const std::string& value);
+
+        ConfigSection(Core& core, const std::string& name);
+    private:
+        Core* m_core;
+        std::string m_name;
+        std::vector<Param> params;
+    };
+
+    ConfigSection ConfigOpenSection(const std::string& name);
+
+    std::filesystem::path GetSharedDataFilePath(const std::string& file);
+    std::filesystem::path GetUserConfigPath();
+    std::filesystem::path GetUserDataPath();
+    std::filesystem::path GetUserCachePath();
 
 private:
     bool support_no_game;
@@ -100,8 +176,16 @@ private:
     u8 *gameData;
     std::size_t gameSize;
 
-    //Honestly... I'm stupid and have no idea how big this should be
-    u32 ctrl_b[128];
+    bool changes;
+    std::fstream mfile;
+
+    std::filesystem::path config_dir,data_dir;
+    //std::fstream config_file,data_file;
+
+    unsigned int ctrl_b[4];
+
+    retro_system_info sys_inf;
+    retro_system_av_info sys_av_inf;
 
     struct {
         void *handle;

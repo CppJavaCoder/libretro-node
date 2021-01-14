@@ -12,22 +12,22 @@ View::View() :
 
 void View::LoadConfig(RETRO::Core& core)
 {
-    //for (auto& cont : m_cont_tabs)
-    //    cont.LoadConfig(core);
+    for (auto& cont : m_cont_tabs)
+        cont.LoadConfig(core);
     m_events_tab.LoadConfig(core);
 }
 
 void View::SaveConfig(RETRO::Core& core)
 {
-    //for (auto& cont : m_cont_tabs)
-    //    cont.SaveConfig(core);
+    for (auto& cont : m_cont_tabs)
+        cont.SaveConfig(core);
     m_events_tab.SaveConfig(core);
 }
 
 void View::DoEvent(const SDL_Event& e)
 {
-    //for (std::size_t i = 0; i < 4; ++i)
-    //    m_cont_tabs[i].DoEvent(e, m_tab_index == i && IsOpen());
+    for (std::size_t i = 0; i < 4; ++i)
+        m_cont_tabs[i].DoEvent(e, m_tab_index == i && IsOpen());
 
     if (m_tab_index == 4 && IsOpen())
         m_events_tab.DoEvent(e);
@@ -50,7 +50,7 @@ void View::Show(SDL::Window& main_win)
 
                 if (ImGui::BeginChild("##cont", {}, true)) {
                     m_tab_index = i;
-                    //m_cont_tabs[i].Show();
+                    m_cont_tabs[i].Show();
                 }
                 ImGui::EndChild();
 

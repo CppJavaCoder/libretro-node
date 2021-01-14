@@ -38,7 +38,7 @@ struct StartInfo {
     int window_width;
     int window_height;
     std::vector<u8> window_icon;
-    std::string retrolib;
+    std::filesystem::path retrolib;
     std::filesystem::path config_dir;
     std::filesystem::path data_dir;
 };
@@ -182,6 +182,7 @@ private:
     App();
     ~App();
 
+    public:
     //Not using opengl (Like a fool)
     //void PrintOpenGLInfo();
     void InitVideo(const StartInfo& info);
@@ -204,8 +205,6 @@ private:
     void CoreStartedHandler();
     void CoreStoppedHandler();
     void CreateResourcesHandler();
-    void NewFrameHandler();
-    void NewVIHandler();
     void ResetHandler(bool do_hard_reset);
     void PauseLoopHandler();
     void CoreEventHandler(int event);
@@ -215,6 +214,8 @@ private:
     void SwapHandler();
     std::filesystem::path GetScreenshotPath();
     void TakeScreenshot();
+    void NewFrameHandler();
+    void NewVIHandler();
 };
 
 }
