@@ -51,7 +51,6 @@ void Core::ConfigSaveFile()
     //Checked("ConfigSaveFile", m_ld->ConfigSaveFile());
     if(changes)
     {
-        Logger::Log(LogCategory::Info, "Config", "Saving " + (config_dir/(lastpath)).generic_string());
         if(mfile.is_open())
             mfile.flush();
     }
@@ -132,7 +131,6 @@ Core::ConfigSection::ConfigSection(Core& core, const std::string& name) :
             if(m_name==tmp)
             {
                 inSect = true;
-                Logger::Log(LogCategory::Info, "Config", "Match Found!");
             }
         }
         else if(in[0] != '#' && in[0] != ';' && inSect)
@@ -154,8 +152,6 @@ Core::ConfigSection::ConfigSection(Core& core, const std::string& name) :
 
                 if(buf[buf.size()-1].size() > 0)
                 {
-
-                    Logger::Log(LogCategory::Info, "Config", "Adding to params name:" + buf[0] + " value:" + buf[buf.size()-1]);
                     AddToParams(buf[0],buf[buf.size()-1]);
                     
                 }
@@ -436,7 +432,6 @@ std::string Core::ConfigSection::GetStringOr(const std::string& name, const std:
     {
         if((*i).name == name)
         {
-            Logger::Log(LogCategory::Debug, "Filing", "This:" + (*i).name + " Matches:" + name + " has value:" + Trim((*i).value));
             return Trim((*i).value);
         }
     }

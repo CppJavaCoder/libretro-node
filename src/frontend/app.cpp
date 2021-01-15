@@ -372,10 +372,6 @@ static void core_input_poll(void) {
 static int16_t core_input_state(unsigned port, unsigned device, unsigned index, unsigned id) {
 	if (device != RETRO_DEVICE_JOYPAD)
 		return 0;
-    if(g_joy[port][id])
-    {
-        Logger::Log(LogCategory::Debug,"Port ",std::to_string(port) + " " + std::to_string(g_joy[port][id]));
-    }
 	return g_joy[port][id];
 }
 
@@ -398,8 +394,6 @@ namespace Frontend {
 
 App::App()
 {
-    Logger::Log(LogCategory::Debug, "Joe's debug", "App");
-
     SDL_SetMainReady();
 
     SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
@@ -444,7 +438,6 @@ void App::PrintOpenGLInfo()
 
 void App::InitVideo(const StartInfo& info)
 {
-    Logger::Log(LogCategory::Debug, "Joe's debug", "InitVideo");
     m_video.window = {info.window_title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, info.window_width, info.window_height,
         SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN};
 
@@ -464,7 +457,6 @@ void App::InitVideo(const StartInfo& info)
 
 void App::DeinitVideo()
 {
-    Logger::Log(LogCategory::Debug, "Joe's debug", "DeinitVideo");
     m_video.imgui.Deinitialize();
     m_video.window = {};
 }
@@ -492,45 +484,37 @@ struct AppCallbacks {
 
     static void ResetHandler(int do_hard_reset)
     {
-        Logger::Log(LogCategory::Debug, "Joe's debug", "ResetHandler");
         App::GetInstance().ResetHandler(do_hard_reset);
     }
 
     static void PauseLoopHandler()
     {
-        Logger::Log(LogCategory::Debug, "Joe's debug", "PauseLoopHandler");
         App::GetInstance().PauseLoopHandler();
     }
 
     static void CoreEventHandler(int event)
     {
-        Logger::Log(LogCategory::Debug, "Joe's debug", "CoreEventHandler");
         App::GetInstance().CoreEventHandler(event);
     }
 
     static void CoreStateChangedHandler(void*, int param_type, int new_value)
     {
-        Logger::Log(LogCategory::Debug, "Joe's debug", "CoreStateChangedHandler");
         App::GetInstance().CoreStateChangedHandler(param_type, new_value);
     }
 
     static void DebugInitHandler()
     {
-        Logger::Log(LogCategory::Debug, "Joe's debug", "DebugInitHandler");
         App::GetInstance().DebugInitHandler();
     }
 
     static void DebugUpdateHandler(unsigned pc)
     {
-        Logger::Log(LogCategory::Debug, "Joe's debug", "DebugUpdateHandler");
         App::GetInstance().DebugUpdateHandler(pc);
     }
 };
 
 void App::InitEmu(const StartInfo& info)
 {
-    Logger::Log(LogCategory::Debug, "Joe's debug", std::string("InitEmu ") + std::string(info.retrolib.generic_string() + ".dll").c_str());
-
     m_emu.core.LoadCore(std::string(info.retrolib.generic_string() + ".dll").c_str());
     m_emu.core.Startup(info.config_dir,info.data_dir);
 
@@ -618,7 +602,6 @@ void App::DoEvents()
 
 void App::LoadCheats()
 {
-    Logger::Log(LogCategory::Debug, "Joe's debug", "LoadCheats");
     static const std::string k_NullCrc = "00000000-00000000-0:00";
 
     static const auto init_block = [](RETRO::Cheat::Block* block) {
@@ -648,7 +631,6 @@ void App::LoadCheats()
 
 void App::SaveCheats()
 {
-    Logger::Log(LogCategory::Debug, "Joe's debug", "SaveCheats");
     try {
         RETRO::Cheat::Save(m_emu.data_dir / "libretro_user.txt", m_cheats.user_map);
     }
@@ -659,7 +641,6 @@ void App::SaveCheats()
 
 void App::LoadROMCheats()
 {
-    Logger::Log(LogCategory::Debug, "Joe's debug", "LoadROMCheats");
     // Yet to be implemented
     
     RETRO::Core::RetroHeader header;
@@ -693,7 +674,6 @@ void App::LoadROMCheats()
 
 void App::InitUtilWindows()
 {
-    Logger::Log(LogCategory::Debug, "Joe's debug", "InitUtilWindows");
     m_util_win.input_conf = std::make_unique<InputConf::View>();
     m_util_win.input_conf->LoadConfig(m_emu.core);
     m_util_win.input_conf->OnClosed.connect<&App::InputConfigClosedHandler>(this);
@@ -719,20 +699,14 @@ void App::DeinitUtilWindows()
             map[n] = nullptr;
         }
 
-    Logger::Log(LogCategory::Debug, "Joe's debug", "DeinitUtilWindows1");
     m_util_win.input_conf->OnClosed.disconnect<&App::InputConfigClosedHandler>(this);
-    Logger::Log(LogCategory::Debug, "Joe's debug", "DeinitUtilWindows2");
     m_util_win.input_conf->SaveConfig(m_emu.core);
-    Logger::Log(LogCategory::Debug, "Joe's debug", "DeinitUtilWindows3");
     m_util_win.input_conf.reset();
 
-    Logger::Log(LogCategory::Debug, "Joe's debug", "DeinitUtilWindows4");
     // Currently Crashes
     //m_util_win.cheat_conf->DisableAllEntries();
-    Logger::Log(LogCategory::Debug, "Joe's debug", "DeinitUtilWindows5");
     m_util_win.cheat_conf.reset();
 
-    Logger::Log(LogCategory::Debug, "Joe's debug", "DeinitUtilWindows6");
     m_util_win.mem_viewer.reset();
 }
 
@@ -762,7 +736,6 @@ void App::ShowUtilWindows()
 void App::Startup(const StartInfo& info)
 {
     inf = info;
-    Logger::Log(LogCategory::Debug, "Joe's debug", "Startup");
     InitVideo(info);
     // Not currently needed afaik
     //InitFrameCapture();
@@ -791,17 +764,13 @@ void App::Startup(const StartInfo& info)
 
 void App::Shutdown()
 {
-    Logger::Log(LogCategory::Debug, "Joe's debug", "Shutdown");
     SaveCheats();
     DeinitVideo();
     DeinitEmu();
-    Logger::Log(LogCategory::Debug, "Joe's debug", "Shutdown End");
 }
 
 void App::Execute()
 {
-    Logger::Log(LogCategory::Debug, "Joe's debug", "Execute");
-
     m_emu.execute = std::async(std::launch::async,[this]() {
     try{
         ImGuiSDL::Initialize(g_rnd,inf.window_width,inf.window_height);
@@ -824,14 +793,14 @@ void App::Execute()
 
 void App::Stop()
 {
-    Logger::Log(LogCategory::Debug, "Joe's debug", "Stop");
     //m_emu.core.Stop();
     m_emu.stopping = true;
 }
 
 VideoOutputInfo App::GetVideoOutputInfo()
 {
-    Logger::Log(LogCategory::Debug, "Joe's debug", "GetVideoOutputInfo");
+    //Everything about this function will have to be revisited
+    //Logger::Log(LogCategory::Debug, "Joe's debug", "GetVideoOutputInfo");
     //if (m_emu.core.GetEmuState() == M64EMU_STOPPED)
     //    return {};
 
@@ -891,7 +860,7 @@ VideoOutputInfo App::GetVideoOutputInfo()
 
 void App::UpdateVideoOutputSize()
 {
-    Logger::Log(LogCategory::Debug, "Joe's debug", "UpdateVideoOutputSize");
+    //Might as well throw this function into the TRASH
     //if (m_emu.core.GetEmuState() != M64EMU_RUNNING)
     //    return;
 
@@ -905,13 +874,13 @@ void App::UpdateVideoOutputSize()
 
 void App::ToggleFullScreen()
 {
-    Logger::Log(LogCategory::Debug, "Joe's debug", "ToggleFullScreen");
+    //Logger::Log(LogCategory::Debug, "Joe's debug", "ToggleFullScreen");
     m_video.window.ToggleFullScreen();
 }
 
 void App::CaptureFrame()
 {
-    Logger::Log(LogCategory::Debug, "Joe's debug", "CaptureFrame");
+    //Logger::Log(LogCategory::Debug, "Joe's debug", "CaptureFrame");
     //if (m_emu.core.GetEmuState() == M64EMU_STOPPED)
     //    return;
 
@@ -988,14 +957,16 @@ void App::DispatchEvents()
 
 void App::DestroyTextureLater(u32 id)
 {
-    Logger::Log(LogCategory::Debug, "Joe's debug", "DestroyTextureLater");
+    //More uneeded functions to revisit
+    //Logger::Log(LogCategory::Debug, "Joe's debug", "DestroyTextureLater");
     std::lock_guard lock{m_tex_to_destroy_mutex};
     m_tex_to_destroy.push_back(id);
 }
 
 void App::DestroyTextures()
 {
-    Logger::Log(LogCategory::Debug, "Joe's debug", "DestroyTextures");
+    //More uneeded functions to revisit
+    //Logger::Log(LogCategory::Debug, "Joe's debug", "DestroyTextures");
     std::lock_guard lock{m_tex_to_destroy_mutex};
 
     if (m_tex_to_destroy.empty())
@@ -1009,13 +980,14 @@ void App::DestroyTextures()
 
 void App::BindingBeforeCreateResources()
 {
-    Logger::Log(LogCategory::Debug, "Joe's debug", "BindingBeforeCreateResources");
+    //Hmmmm, feels like something should be here
+    //Logger::Log(LogCategory::Debug, "Joe's debug", "BindingBeforeCreateResources");
     //m_video.gl_context.MakeCurrent(m_video.window);
 }
 
 void App::BindingAfterCreateResources()
 {
-    Logger::Log(LogCategory::Debug, "Joe's debug", "BindingAfterCreateResources");
+    //Logger::Log(LogCategory::Debug, "Joe's debug", "BindingAfterCreateResources");
     //SDL::GLContext::MakeCurrentNone();
 }
 
@@ -1100,7 +1072,6 @@ void App::BindingAfterRender()
 
 void App::CoreStartedHandler()
 {
-    Logger::Log(LogCategory::Debug, "Joe's debug", "CoreStartedHandler");
     m_emu.elapsed_frames = 0;
     //m_emu.gfx_aspect = m_emu.core.ConfigOpenSection("Video-GLideN64").GetIntOr("AspectRatio", 1);
 
@@ -1113,7 +1084,6 @@ void App::CoreStartedHandler()
 
 void App::CoreStoppedHandler()
 {
-    Logger::Log(LogCategory::Debug, "Joe's debug", "CoreStoppedHandler");
     m_video.window.Hide();
     DeinitUtilWindows();
     OnCoreStopped.fire();
@@ -1121,7 +1091,6 @@ void App::CoreStoppedHandler()
 
 void App::CreateResourcesHandler()
 {
-    Logger::Log(LogCategory::Debug, "Joe's debug", "CreateResourcesHandler");
     //auto bound_tex = Gfx::Texture::GetCurrentBound();
     //SDL::GLContext::MakeCurrentNone();
 
@@ -1139,7 +1108,6 @@ void App::NewFrameHandler()
 
 void App::NewVIHandler()
 {
-    //Logger::Log(LogCategory::Debug, "Joe's debug", "NewVIHandler");
     //DestroyTextures();
 
     //Crashes
@@ -1166,13 +1134,11 @@ void App::NewVIHandler()
 
 void App::ResetHandler(bool do_hard_reset)
 {
-    Logger::Log(LogCategory::Debug, "Joe's debug", "ResetHandler");
     m_emu.notify_reset = 1 + do_hard_reset;
 }
 
 void App::PauseLoopHandler()
 {
-    Logger::Log(LogCategory::Debug, "Joe's debug", "PauseLoopHandler");
     auto ticks = SDL_GetTicks();
 
     NewVIHandler();
@@ -1184,7 +1150,6 @@ void App::PauseLoopHandler()
 
 void App::CoreEventHandler(int event)
 {
-    Logger::Log(LogCategory::Debug, "Joe's debug", "CoreEventHandler");
     if (!HasEmuInputFocus())
         return;
 
@@ -1194,7 +1159,6 @@ void App::CoreEventHandler(int event)
 
 void App::CoreStateChangedHandler(int param_type, int new_value)
 {
-    Logger::Log(LogCategory::Debug, "Joe's debug", "CoreStateChangedHandler");
     if (!m_emu.started && param_type == 1 && new_value == 2)
         m_emu.started = m_emu.notify_started = true;
 
@@ -1204,20 +1168,17 @@ void App::CoreStateChangedHandler(int param_type, int new_value)
 
 void App::DebugInitHandler()
 {
-    Logger::Log(LogCategory::Debug, "Joe's debug", "DebugInitHandler");
     m_emu.debug_init = true;
     OnDebugInit.fire();
 }
 
 void App::DebugUpdateHandler(unsigned pc)
 {
-    Logger::Log(LogCategory::Debug, "Joe's debug", "DebugUpdateHandler");
     OnDebugUpdate.fire(pc);
 }
 
 void App::SwapHandler()
 {
-    //Logger::Log(LogCategory::Debug, "Joe's debug", "SwapHandler");
     //auto bound_tex = Gfx::Texture::GetCurrentBound();
     //SDL::GLContext::MakeCurrentNone();
 
