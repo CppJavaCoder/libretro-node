@@ -157,8 +157,7 @@ std::vector<Core::ConfigSection::Param> Core::ConfigSection::ListParams()
 
 void Core::ConfigSection::Save()
 {
-
-
+    Erase(false);
     m_core->ConfigSaveFile();
     //Checked("ConfigSaveSection", m_core->m_ld->ConfigSaveSection(m_name.c_str()));
 }
@@ -168,7 +167,7 @@ bool Core::ConfigSection::HasUnsavedChanges()
     return m_core->changes;
 }
 
-void Core::ConfigSection::Erase()
+void Core::ConfigSection::Erase(bool clprm)
 {
     //Checked("ConfigDeleteSection", m_core->m_ld->ConfigDeleteSection(m_name.c_str()));
 
@@ -204,7 +203,8 @@ void Core::ConfigSection::Erase()
         else
         {
             m_core->changes = true;
-            params.clear();
+            if(clprm)
+                params.clear();
         }
         
     }
@@ -212,6 +212,16 @@ void Core::ConfigSection::Erase()
     m_core->mfile.open(m_name,std::ios::trunc|std::ios::in|std::ios::out);
     for(std::vector<std::string>::iterator n=fileStrBuf.begin();n!=fileStrBuf.end();n++)
         m_core->mfile << *n;
+    
+    if(clprm)
+        return;
+
+    m_core->mfile << "[" << m_name << "]\n";
+    for(std::vector<Param>::iterator i = params.begin(); i != params.end(); i++)
+    {
+        m_core->mfile << (*i).name << " = " << (*i).value << "\n";
+    }
+    
 
 }
 
@@ -266,78 +276,103 @@ void Core::ConfigSection::SetDefaultString(const std::string& name, const std::s
 
 int Core::ConfigSection::GetInt(const std::string& name)
 {
+    for(std::vector<Param>::iterator i = params.begin(); i != params.end(); i++)
+        if((*i).name == name)
+            return std::atoi((*i).value.c_str());
     //return m_core->m_ld->ConfigGetParamInt(m_handle, name.c_str());
     return 0;
 }
 
 int Core::ConfigSection::GetIntOr(const std::string& name, int value)
 {
-    int v;
+    for(std::vector<Param>::iterator i = params.begin(); i != params.end(); i++)
+        if((*i).name == name)
+            return std::atoi(i->value.c_str());
     //m64p_error ret = m_core->m_ld->ConfigGetParameter(m_handle, name.c_str(), M64TYPE_INT, &v, static_cast<int>(sizeof(int)));
-    bool ret = false;
-    return ret == true ? v : value;
+    return value;
 }
 
 void Core::ConfigSection::SetInt(const std::string& name, int value)
 {
+    for(std::vector<Param>::iterator i = params.begin(); i != params.end(); i++)
+        if((*i).name == name)
+            (*i).value = std::to_string(value);
     //Checked("ConfigSetParameter:SetInt", m_core->m_ld->ConfigSetParameter(m_handle, name.c_str(), M64TYPE_INT, &value));
 }
 
 float Core::ConfigSection::GetFloat(const std::string& name)
 {
+    for(std::vector<Param>::iterator i = params.begin(); i != params.end(); i++)
+        if((*i).name == name)
+            return std::atof(i->value.c_str());
     //return m_core->m_ld->ConfigGetParamFloat(m_handle, name.c_str());
     return 0;
 }
 
 float Core::ConfigSection::GetFloatOr(const std::string& name, float value)
 {
-    float v;
+    for(std::vector<Param>::iterator i = params.begin(); i != params.end(); i++)
+        if((*i).name == name)
+            return std::atof(i->value.c_str());
     //m64p_error ret = m_core->m_ld->ConfigGetParameter(m_handle, name.c_str(), M64TYPE_FLOAT, &v, static_cast<int>(sizeof(float)));
-    bool ret = false;
-    return ret == true ? v : value;
+    return value;
 }
 
 void Core::ConfigSection::SetFloat(const std::string& name, float value)
 {
+    for(std::vector<Param>::iterator i = params.begin(); i != params.end(); i++)
+        if((*i).name == name)
+            (*i).value = std::to_string(value);
     //Checked("ConfigSetParameter:SetFloat", m_core->m_ld->ConfigSetParameter(m_handle, name.c_str(), M64TYPE_FLOAT, &value));
 }
 
 bool Core::ConfigSection::GetBool(const std::string& name)
 {
+    for(std::vector<Param>::iterator i = params.begin(); i != params.end(); i++)
+        if((*i).name == name)
+            return ToLower((*i).value) == "true";
     //return m_core->m_ld->ConfigGetParamBool(m_handle, name.c_str());
     return false;
 }
 
 bool Core::ConfigSection::GetBoolOr(const std::string& name, bool value)
 {
-    int v;
-    //m64p_error ret = m_core->m_ld->ConfigGetParameter(m_handle, name.c_str(), M64TYPE_BOOL, &v, static_cast<int>(sizeof(int)));
-    bool ret = false;
-    return ret == true ? v : value;
+    for(std::vector<Param>::iterator i = params.begin(); i != params.end(); i++)
+        if((*i).name == name)
+            return ToLower((*i).value) == "true";
+    return value;
 }
 
 void Core::ConfigSection::SetBool(const std::string& name, bool value)
 {
-    int v = value;
+    for(std::vector<Param>::iterator i = params.begin(); i != params.end(); i++)
+        if((*i).name == name)
+            (*i).value = (value ? "True" : "False");
     //Checked("ConfigSetParameter:SetBool", m_core->m_ld->ConfigSetParameter(m_handle, name.c_str(), M64TYPE_BOOL, &v));
 }
 
 std::string Core::ConfigSection::GetString(const std::string& name)
 {
+    for(std::vector<Param>::iterator i = params.begin(); i != params.end(); i++)
+        if((*i).name == name)
+            return (*i).value;
     //return m_core->m_ld->ConfigGetParamString(m_handle, name.c_str());
     return "";
 }
 
 std::string Core::ConfigSection::GetStringOr(const std::string& name, const std::string& value)
 {
-    char v[200];
-    //m64p_error ret = m_core->m_ld->ConfigGetParameter(m_handle, name.c_str(), M64TYPE_STRING, v, 200);
-    bool ret = false;
-    return ret == true ? v : value;
+    for(std::vector<Param>::iterator i = params.begin(); i != params.end(); i++)
+        if((*i).name == name)
+            return (*i).value;
+    return value;
 }
 
 void Core::ConfigSection::SetString(const std::string& name, const std::string& value)
 {
+    for(std::vector<Param>::iterator i = params.begin(); i != params.end(); i++)
+        if((*i).name == name)
+            (*i).value = value;
     //Checked("ConfigSetParameter:SetString", m_core->m_ld->ConfigSetParameter(m_handle, name.c_str(), M64TYPE_STRING, const_cast<char*>(value.c_str())));
 }
 

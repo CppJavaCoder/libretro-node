@@ -30,7 +30,13 @@ namespace InputConf
                         output[i] = 1;
                 break;
                 case MapType::JoyHat:
-                    if(ctab->m_joystick.GetHat(ctab->m_map[i].jhat.hat)==ctab->m_map[i].jhat.raw_dir)
+                    if(ctab->m_map[i].jhat.dir == JoyHatDir::Right && ctab->m_joystick.GetHat(ctab->m_map[i].jhat.hat) & SDL_HAT_RIGHT)
+                        output[i] = 1;
+                    if(ctab->m_map[i].jhat.dir == JoyHatDir::Left && ctab->m_joystick.GetHat(ctab->m_map[i].jhat.hat) & SDL_HAT_LEFT)
+                        output[i] = 1;
+                    if(ctab->m_map[i].jhat.dir == JoyHatDir::Down && ctab->m_joystick.GetHat(ctab->m_map[i].jhat.hat) & SDL_HAT_DOWN)
+                        output[i] = 1;
+                    if(ctab->m_map[i].jhat.dir == JoyHatDir::Up && ctab->m_joystick.GetHat(ctab->m_map[i].jhat.hat) & SDL_HAT_UP)
                         output[i] = 1;
                 break;
                 case MapType::JoyButton:
@@ -39,7 +45,7 @@ namespace InputConf
                 break;
                 case MapType::JoyAxis:
                     if(ctab->m_joystick.GetAxis(ctab->m_map[i].jaxis.axis))
-                        output[i] = ctab->m_joystick.GetAxis(ctab->m_map[i].jaxis.axis);
+                        output[i] = abs(ctab->m_joystick.GetAxis(ctab->m_map[i].jaxis.axis)/40);
                 break;
             }
         return output;

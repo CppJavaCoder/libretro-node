@@ -130,7 +130,7 @@ public:
         std::vector<Param> ListParams();
         void Save();
         bool HasUnsavedChanges();
-        void Erase();
+        void Erase(bool clprm = true);
         void RevertChanges();
 
         std::string GetHelp(const std::string& name);
