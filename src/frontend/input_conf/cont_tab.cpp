@@ -24,9 +24,9 @@ const std::array<const char*, 6> k_plugin_names {
 const std::array<const char*, MapIndex_Count> k_labels {
     "X Axis Left", "X Axis Right", "Y Axis Up", "Y Axis Down",
     "DPad Left", "DPad Right", "DPad Up", "DPad Down",
-    "Start", "Z Trigger", "B Button", "A Button",
+    "Start", "Select", "Z Trigger", "B Button", "A Button", "Y Button", "X Button",
     "C Button Left", "C Button Right", "C Button Up", "C Button Down",
-    "L Trigger", "R Trigger",
+    "L Trigger", "R Trigger", "L Bumper", "R Bumper",
     "C Button Left", "C Button Right", "C Button Up", "C Button Down",
     "Memory Pak", "Rumble Pak"
 };

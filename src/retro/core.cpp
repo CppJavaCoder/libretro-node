@@ -356,10 +356,11 @@ void Core::ROMWriteBuffer(u32 addr, u8* buf, std::size_t len)
 void Core::ContSetInput(u32 controller,unsigned int value)
 {
     ctrl_b[controller] = value;
-    Logger::Log(LogCategory::Debug,"CORE CTRL ",std::to_string(value));
+    //Logger::Log(LogCategory::Debug,"ContSetInput",std::string("Controller ") + std::to_string(controller) + " Value "+std::to_string(value));
 }
 unsigned int Core::ContGetInput(u32 controller)
 {
+    //Logger::Log(LogCategory::Debug,"ContGetInput",std::string("Controller ") + std::to_string(controller) + " Value "+std::to_string(ctrl_b[controller]));
     return ctrl_b[controller];
 }
 void Core::SetGame(void *data,std::size_t size)

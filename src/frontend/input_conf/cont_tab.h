@@ -14,6 +14,7 @@ namespace InputConf {
 
 class ContTab
 {
+friend class InputMap;
 public:
 	ContTab(int cont_index);
 

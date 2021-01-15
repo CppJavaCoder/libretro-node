@@ -325,22 +325,40 @@ static void core_video_refresh(const void *data, unsigned width, unsigned height
 
 static void core_input_poll(void) {
 	int i;
-    g_kbd = SDL_GetKeyboardState(NULL);
+    std::vector<u8> input = Frontend::App::GetInstance().GetInputMap(0)->Update();
+
+    const Uint8 *keys = SDL_GetKeyboardState(NULL);
+    if(keys[SDL_SCANCODE_ESCAPE])
+        running = false;
 
     //g_binds[0].k = Frontend::App::GetInstance().GetInput().GetButton(0,0);
-    for(int n = 0; n < RETRO_DEVICE_ID_JOYPAD_R3-1;n++)
-        Frontend::App::GetInstance().GetInput().SetButton(0,n,true);
+    Frontend::App::GetInstance().GetInput().SetButton(0,RETRO_DEVICE_ID_JOYPAD_A,(bool)input[InputConf::MapUtil::MapIndex_A]);
+    Frontend::App::GetInstance().GetInput().SetButton(0,RETRO_DEVICE_ID_JOYPAD_B,(bool)input[InputConf::MapUtil::MapIndex_B]);
+    Frontend::App::GetInstance().GetInput().SetButton(0,RETRO_DEVICE_ID_JOYPAD_X,(bool)input[InputConf::MapUtil::MapIndex_X]);
+    Frontend::App::GetInstance().GetInput().SetButton(0,RETRO_DEVICE_ID_JOYPAD_Y,(bool)input[InputConf::MapUtil::MapIndex_Y]);
+    Frontend::App::GetInstance().GetInput().SetButton(0,RETRO_DEVICE_ID_JOYPAD_DOWN,(bool)input[InputConf::MapUtil::MapIndex_YAxisDown]);
+    Frontend::App::GetInstance().GetInput().SetButton(0,RETRO_DEVICE_ID_JOYPAD_UP,(bool)input[InputConf::MapUtil::MapIndex_YAxisUp]);
+    Frontend::App::GetInstance().GetInput().SetButton(0,RETRO_DEVICE_ID_JOYPAD_LEFT,(bool)input[InputConf::MapUtil::MapIndex_XAxisLeft]);
+    Frontend::App::GetInstance().GetInput().SetButton(0,RETRO_DEVICE_ID_JOYPAD_RIGHT,(bool)input[InputConf::MapUtil::MapIndex_XAxisRight]);
+    Frontend::App::GetInstance().GetInput().SetButton(0,RETRO_DEVICE_ID_JOYPAD_START,(bool)input[InputConf::MapUtil::MapIndex_Start]);
+    Frontend::App::GetInstance().GetInput().SetButton(0,RETRO_DEVICE_ID_JOYPAD_SELECT,(bool)input[InputConf::MapUtil::MapIndex_Select]);
+//    Frontend::App::GetInstance().GetInput().SetButton(0,RETRO_DEVICE_ID_JOYPAD_A,(bool)input[InputConf::MapUtil::MapIndex_A]);
+//    Frontend::App::GetInstance().GetInput().SetButton(0,RETRO_DEVICE_ID_JOYPAD_A,(bool)input[InputConf::MapUtil::MapIndex_A]);
+//    Frontend::App::GetInstance().GetInput().SetButton(0,RETRO_DEVICE_ID_JOYPAD_A,(bool)input[InputConf::MapUtil::MapIndex_A]);
+
+    Frontend::App::GetInstance().GetInput().Update(Frontend::App::GetInstance().GetCore());
 
 	for (i = 0; i < RETRO_DEVICE_ID_JOYPAD_R3-1; i++)
     {
-        g_joy[i] = Frontend::App::GetInstance().GetInput().GetButton(0,i);
+        if(i == RETRO_DEVICE_ID_JOYPAD_RIGHT
+        || i == RETRO_DEVICE_ID_JOYPAD_LEFT
+        || i == RETRO_DEVICE_ID_JOYPAD_DOWN
+        || i == RETRO_DEVICE_ID_JOYPAD_UP)
+            g_joy[i] = Frontend::App::GetInstance().GetInput().GetButton(0,i);
+        else
+            g_joy[i] = Frontend::App::GetInstance().GetInput().GetButtonDown(0,i);
         if(g_joy[i])
             Logger::Log(LogCategory::Info,"Ctrl","g_joy " + std::to_string(i));
-    }
-
-    if (g_kbd[SDL_SCANCODE_ESCAPE])
-    {
-        running = false;
     }
 }
 
@@ -381,10 +399,19 @@ App::App()
     m_sdl_init.sdl.Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_HAPTIC);
     m_sdl_init.img.Init(IMG_INIT_PNG | IMG_INIT_JPG);
     m_sdl_init.ttf.Init();
+
+    for(int n = 0; n < 4; n++)
+        map[n] = nullptr;
 }
 
 App::~App()
 {
+    for(int n = 0; n < 4; n++)
+        if(map[n] != nullptr)
+        {
+            delete map[n];
+            map[n] = nullptr;
+        }
     m_sdl_init.ttf.Quit();
     m_sdl_init.img.Quit();
     m_sdl_init.sdl.Quit();
@@ -573,7 +600,9 @@ void App::DoEvents()
         }
 
         if (m_util_win.input_conf)
+        {
             m_util_win.input_conf->DoEvent(e);
+        }
     }
 }
 
@@ -659,6 +688,13 @@ void App::InitUtilWindows()
     m_util_win.input_conf->LoadConfig(m_emu.core);
     m_util_win.input_conf->OnClosed.connect<&App::InputConfigClosedHandler>(this);
 
+    for(int n=0;n<4;n++)
+    {
+        if(map[n]!=nullptr)
+            delete map[n];
+        map[n] = new InputConf::InputMap(m_util_win.input_conf->GetContTab(n));
+    }
+
     m_util_win.cheat_conf = std::make_unique<CheatConf::View>(m_emu.core, *m_cheats.block, *m_cheats.user_block);
 
     m_util_win.mem_viewer = std::make_unique<MemViewer::View>(m_emu.core);
@@ -666,6 +702,13 @@ void App::InitUtilWindows()
 
 void App::DeinitUtilWindows()
 {
+    for(int n=0;n<4;n++)
+        if(map[n]!=nullptr)
+        {
+            delete map[n];
+            map[n] = nullptr;
+        }
+
     Logger::Log(LogCategory::Debug, "Joe's debug", "DeinitUtilWindows1");
     m_util_win.input_conf->OnClosed.disconnect<&App::InputConfigClosedHandler>(this);
     Logger::Log(LogCategory::Debug, "Joe's debug", "DeinitUtilWindows2");
@@ -1223,6 +1266,10 @@ void App::TakeScreenshot()
 
     SDL::Surface s{buf.data(), width, height, 32, static_cast<int>(pitch), SDL_PIXELFORMAT_ABGR8888};
     s.SavePNG(GetScreenshotPath());*/
+}
+InputConf::InputMap *App::GetInputMap(int n)
+{
+    return map[n];
 }
 
 }

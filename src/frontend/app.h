@@ -24,6 +24,8 @@
 #include <libretro.h>
 #include <nano_signal_slot.hpp>
 
+#include "frontend/input_conf/input_map.h"
+
 struct ImFont;
 
 namespace Frontend {
@@ -165,6 +167,8 @@ private:
         bool rebuild_atlas;
     };
 
+    InputConf::InputMap *map[4];
+
     SdlInit m_sdl_init;
     Video m_video;
     Emu m_emu{};
@@ -181,8 +185,11 @@ private:
 
     App();
     ~App();
-
+    
     public:
+
+    InputConf::InputMap *GetInputMap(int n);
+
     //Not using opengl (Like a fool)
     //void PrintOpenGLInfo();
     void InitVideo(const StartInfo& info);

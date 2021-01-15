@@ -16,6 +16,8 @@ public:
     void DoEvent(const SDL_Event& e);
     void Show(SDL::Window& main_win);
 
+    ContTab *GetContTab(int index);
+
 private:
     std::size_t m_tab_index{};
     std::array<ContTab, 4> m_cont_tabs;

@@ -33,6 +33,11 @@ void View::DoEvent(const SDL_Event& e)
         m_events_tab.DoEvent(e);
 }
 
+ContTab *View::GetContTab(int index)
+{
+    return &m_cont_tabs[index];
+}
+
 void View::Show(SDL::Window& main_win)
 {
     if (!m_open)
