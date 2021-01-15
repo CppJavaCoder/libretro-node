@@ -357,8 +357,6 @@ static void core_input_poll(void) {
             g_joy[i] = Frontend::App::GetInstance().GetInput().GetButton(0,i);
         else
             g_joy[i] = Frontend::App::GetInstance().GetInput().GetButtonDown(0,i);
-        if(g_joy[i])
-            Logger::Log(LogCategory::Info,"Ctrl","g_joy " + std::to_string(i));
     }
 }
 

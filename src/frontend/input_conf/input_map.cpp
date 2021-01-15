@@ -44,8 +44,35 @@ namespace InputConf
                         output[i] = 1;
                 break;
                 case MapType::JoyAxis:
-                    if(ctab->m_joystick.GetAxis(ctab->m_map[i].jaxis.axis))
-                        output[i] = abs(ctab->m_joystick.GetAxis(ctab->m_map[i].jaxis.axis)/40);
+                    bool in_range = ctab->m_joystick.GetAxis(ctab->m_map[i].jaxis.axis) < ctab->m_joy_init_axes[ctab->m_map[i].jaxis.axis] - 18000
+                        || ctab->m_joystick.GetAxis(ctab->m_map[i].jaxis.axis) > ctab->m_joy_init_axes[ctab->m_map[i].jaxis.axis] + 18000;
+                    if(in_range && ctab->m_map[i].jaxis.dir == MapUtil::JoyAxisDir::Positive && ctab->m_joystick.GetAxis(ctab->m_map[i].jaxis.axis))
+                    {
+                        int value = ctab->m_joystick.GetAxis(ctab->m_map[i].jaxis.axis)/140;
+                        if(ctab->m_map[i].jaxis.dir == MapUtil::JoyAxisDir::Positive)
+                        {
+                            if(value > 0)
+                                output[i] = value;
+                            else
+                                output[i] = 0;
+                        }else
+                        {
+                            if(value < 0)
+                                output[i] = abs(value);
+                            else
+                                output[i] = 0;                            
+                        }
+                        
+                    }
+                    else if(in_range && ctab->m_map[i].jaxis.dir == MapUtil::JoyAxisDir::Negative && ctab->m_joystick.GetAxis(ctab->m_map[i].jaxis.axis))
+                    {
+                        Logger::Log(LogCategory::Debug,"CTRL","Negative");
+                        int value = -ctab->m_joystick.GetAxis(ctab->m_map[i].jaxis.axis)/129;
+                        if(value > 0)
+                            output[i] = value;
+                        else
+                            output[i] = 0;
+                    }
                 break;
             }
         return output;
