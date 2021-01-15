@@ -21,10 +21,11 @@
 #include <string>
 #include <vector>
 
-#include <libretro.h>
 #include <nano_signal_slot.hpp>
 
 #include "frontend/input_conf/input_map.h"
+
+#include "retro_bound.h"
 
 struct ImFont;
 
@@ -182,6 +183,7 @@ private:
     std::mutex m_tex_to_destroy_mutex;
     std::vector<u32> m_tex_to_destroy;
     bool m_take_shot{};
+    bool resized;
 
     App();
     ~App();
