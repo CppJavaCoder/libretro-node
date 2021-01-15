@@ -7,22 +7,22 @@ else()
 endif()
 
 if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
+    if(NOT DEFINED ENV{vcpkg_x64})
+        message(FATAL_ERROR "env variable 'vcpkg_x64' not defined")
+    endif()
+
     set(INCLUDE_DIR "$ENV{vcpkg_x64}/include")
     set(LIB_DIR "$ENV{vcpkg_x64}/${BUILD_PATH}/lib")
 elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "Win32")
+    if(NOT DEFINED ENV{vcpkg_x86})
+        message(FATAL_ERROR "env variable 'vcpkg_x86' not defined")
+    endif()
+
     set(INCLUDE_DIR "$ENV{vcpkg_x86}/include")
     set(LIB_DIR "$ENV{vcpkg_x86}/${BUILD_PATH}/lib")
 endif()
 
 set(SDL2_LIBRARY "${LIB_DIR}/SDL2${BUILD_SUFFIX}.lib")
-
-
-set(SDL2_LIBRARY "C:/Programming/Libraries/SDL_Dev2.10/InOne/lib/SDL2.lib")
-
-
-set(INCLUDE_DIR "C:/Programming/Libraries/SDL_Dev2.10/InOne/include")
-set(LIB_DIR "C:/Programming/Libraries/SDL_Dev2.10/InOne/lib")
-
 
 add_library(sdl2::sdl2 UNKNOWN IMPORTED)
 set_target_properties(sdl2::sdl2 PROPERTIES IMPORTED_LOCATION "${SDL2_LIBRARY}" INTERFACE_INCLUDE_DIRECTORIES "${INCLUDE_DIR}")
