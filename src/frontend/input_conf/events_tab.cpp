@@ -38,7 +38,7 @@ EventsTab::EventsTab()
 
 void EventsTab::LoadConfig(RETRO::Core& core)
 {
-    auto section = core.ConfigOpenSection("CoreEvents");
+    auto section = core.OpenSection("LibretroEventsTab","CoreEvents");
 
     for (int i{}; i < EventIndex_NumEvents; ++i)
         m_kbd_map[i] = ParseKbdEvent(std::to_string(section.GetIntOr(k_conf_labels[i], s_conf_defaults[i])));
@@ -49,12 +49,12 @@ void EventsTab::LoadConfig(RETRO::Core& core)
 
 void EventsTab::SaveConfig(RETRO::Core& core)
 {
-    auto section = core.ConfigOpenSection("CoreEvents");
+    auto section = core.OpenSection("LibretroEventsTab","CoreEvents");
 
     for (int i{}; i < EventIndex_NumEvents; ++i)
         section.SetInt(k_conf_labels[i], GetKbdEventKey(m_kbd_map[i]));
 
-    core.ConfigSaveFile();
+    section.Save();
 }
 
 void EventsTab::DoEvent(const SDL_Event& e)

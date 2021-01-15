@@ -157,12 +157,14 @@ public:
 
         ConfigSection(Core& core, const std::string& name);
     private:
+        void AddToParams(std::string name,std::string val);
         Core* m_core;
         std::string m_name;
         std::vector<Param> params;
     };
 
     ConfigSection ConfigOpenSection(const std::string& name);
+    ConfigSection OpenSection(const std::string &fname, const std::string& name);
 
     std::filesystem::path GetSharedDataFilePath(const std::string& file);
     std::filesystem::path GetUserConfigPath();
@@ -180,6 +182,7 @@ private:
     std::fstream mfile;
 
     std::filesystem::path config_dir,data_dir;
+    std::string lastpath;
     //std::fstream config_file,data_file;
 
     unsigned int ctrl_b[4];

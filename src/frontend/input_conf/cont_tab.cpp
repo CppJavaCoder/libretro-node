@@ -63,7 +63,7 @@ ContTab::ContTab(int cont_index) :
 
 void ContTab::LoadConfig(RETRO::Core& core)
 {
-    auto section = core.ConfigOpenSection(fmt::format("Input-SDL-Control{}", m_cont_index + 1).c_str());
+    auto section = core.OpenSection("libretroControlls",fmt::format("Input-SDL-Control{}", m_cont_index + 1).c_str());
 
     auto device_index = section.GetIntOr("device", 0) + 1;
     auto device_name = section.GetStringOr("name", "Keyboard");
@@ -162,7 +162,7 @@ void ContTab::RememberDevice(int device_index, const std::string& device_name)
 
 void ContTab::SaveConfig(RETRO::Core& core)
 {
-    auto section = core.ConfigOpenSection(fmt::format("Input-SDL-Control{}", m_cont_index + 1).c_str());
+    auto section = core.OpenSection("libretroControlls",fmt::format("Input-SDL-Control{}", m_cont_index + 1).c_str());
 
     section.SetFloat("version", 2.0f);
     section.SetInt("mode", 0);
@@ -195,7 +195,7 @@ void ContTab::SaveConfig(RETRO::Core& core)
         { m_map[MapIndex_YAxisUp], m_map[MapIndex_YAxisDown] }
         ).c_str());
 
-    core.ConfigSaveFile();
+    section.Save();
 }
 
 void ContTab::DoEvent(const SDL_Event& e, bool focused)

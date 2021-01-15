@@ -42,6 +42,7 @@ Core::Core() {
     gameSize = 0;
     gameData = nullptr;
     changes = false;
+    lastpath = "Shhhh, It's a secret to everyone!";
 }
 
 Core::~Core()
@@ -115,9 +116,6 @@ void Core::Startup(const std::filesystem::path &config,const std::filesystem::pa
 {
     config_dir = config;
     data_dir = data;
-    if(mfile.is_open())
-        mfile.close();
-    mfile.open(config_dir/".ini");
 }
 void Core::Deinit()
 {
