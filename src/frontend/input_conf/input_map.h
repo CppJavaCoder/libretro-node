@@ -12,7 +12,9 @@ namespace InputConf
     {
         public:
             InputMap(ContTab *tb);
+            ~InputMap();
             std::vector<u8> Update();
+            bool IsPlugged();
         private:
             ContTab *ctab;
     };

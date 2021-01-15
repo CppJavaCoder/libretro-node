@@ -63,7 +63,7 @@ static struct keymap g_binds[] = {
     { 0, 0 }
 };*/
 
-static unsigned g_joy[RETRO_DEVICE_ID_JOYPAD_R3+1] = { 0 };
+static unsigned g_joy[4][(RETRO_DEVICE_ID_JOYPAD_R3+1)] = { 0 };
 
 static void die(const char *fmt, ...) {
 	char buffer[4096];
@@ -283,6 +283,9 @@ static bool core_environment(unsigned cmd, void *data) {
         runloop_frame_time = *frame_time;
         return true;
     }
+//    case RETRO_ENVIRONMENT_GET_INPUT_BITMASKS: {
+//        return true;
+//    }
     case RETRO_ENVIRONMENT_SET_AUDIO_CALLBACK: {
         struct retro_audio_callback *audio_cb = (struct retro_audio_callback*)data;
         audio_callback = *audio_cb;
@@ -324,47 +327,56 @@ static void core_video_refresh(const void *data, unsigned width, unsigned height
 
 
 static void core_input_poll(void) {
-	int i;
-    std::vector<u8> input = Frontend::App::GetInstance().GetInputMap(0)->Update();
 
     const Uint8 *keys = SDL_GetKeyboardState(NULL);
     if(keys[SDL_SCANCODE_ESCAPE])
         running = false;
 
-    //g_binds[0].k = Frontend::App::GetInstance().GetInput().GetButton(0,0);
-    Frontend::App::GetInstance().GetInput().SetButton(0,RETRO_DEVICE_ID_JOYPAD_A,(bool)input[InputConf::MapUtil::MapIndex_A]);
-    Frontend::App::GetInstance().GetInput().SetButton(0,RETRO_DEVICE_ID_JOYPAD_B,(bool)input[InputConf::MapUtil::MapIndex_B]);
-    Frontend::App::GetInstance().GetInput().SetButton(0,RETRO_DEVICE_ID_JOYPAD_X,(bool)input[InputConf::MapUtil::MapIndex_X]);
-    Frontend::App::GetInstance().GetInput().SetButton(0,RETRO_DEVICE_ID_JOYPAD_Y,(bool)input[InputConf::MapUtil::MapIndex_Y]);
-    Frontend::App::GetInstance().GetInput().SetButton(0,RETRO_DEVICE_ID_JOYPAD_DOWN,(bool)input[InputConf::MapUtil::MapIndex_YAxisDown]);
-    Frontend::App::GetInstance().GetInput().SetButton(0,RETRO_DEVICE_ID_JOYPAD_UP,(bool)input[InputConf::MapUtil::MapIndex_YAxisUp]);
-    Frontend::App::GetInstance().GetInput().SetButton(0,RETRO_DEVICE_ID_JOYPAD_LEFT,(bool)input[InputConf::MapUtil::MapIndex_XAxisLeft]);
-    Frontend::App::GetInstance().GetInput().SetButton(0,RETRO_DEVICE_ID_JOYPAD_RIGHT,(bool)input[InputConf::MapUtil::MapIndex_XAxisRight]);
-    Frontend::App::GetInstance().GetInput().SetButton(0,RETRO_DEVICE_ID_JOYPAD_START,(bool)input[InputConf::MapUtil::MapIndex_Start]);
-    Frontend::App::GetInstance().GetInput().SetButton(0,RETRO_DEVICE_ID_JOYPAD_SELECT,(bool)input[InputConf::MapUtil::MapIndex_Select]);
-//    Frontend::App::GetInstance().GetInput().SetButton(0,RETRO_DEVICE_ID_JOYPAD_A,(bool)input[InputConf::MapUtil::MapIndex_A]);
-//    Frontend::App::GetInstance().GetInput().SetButton(0,RETRO_DEVICE_ID_JOYPAD_A,(bool)input[InputConf::MapUtil::MapIndex_A]);
-//    Frontend::App::GetInstance().GetInput().SetButton(0,RETRO_DEVICE_ID_JOYPAD_A,(bool)input[InputConf::MapUtil::MapIndex_A]);
-
-    Frontend::App::GetInstance().GetInput().Update(Frontend::App::GetInstance().GetCore());
-
-	for (i = 0; i < RETRO_DEVICE_ID_JOYPAD_R3-1; i++)
+    for(int n = 0; n < 4; n++)
     {
-        if(i == RETRO_DEVICE_ID_JOYPAD_RIGHT
-        || i == RETRO_DEVICE_ID_JOYPAD_LEFT
-        || i == RETRO_DEVICE_ID_JOYPAD_DOWN
-        || i == RETRO_DEVICE_ID_JOYPAD_UP)
-            g_joy[i] = Frontend::App::GetInstance().GetInput().GetButton(0,i);
-        else
-            g_joy[i] = Frontend::App::GetInstance().GetInput().GetButtonDown(0,i);
+        std::vector<u8> input = Frontend::App::GetInstance().GetInputMap(n)->Update();
+
+        for(int i = 0; i < InputConf::MapUtil::MapIndex_Count; i++)
+            Frontend::App::GetInstance().GetInput().SetButton(n,i,false);
+        //g_binds[0].k = Frontend::App::GetInstance().GetInput().GetButton(0,0);
+        if(Frontend::App::GetInstance().GetInputMap(n)->IsPlugged())
+        {
+            Frontend::App::GetInstance().GetInput().SetButton(n,RETRO_DEVICE_ID_JOYPAD_A,(bool)input[InputConf::MapUtil::MapIndex_A]||(bool)input[InputConf::MapUtil::MapIndex_CRight]);
+            Frontend::App::GetInstance().GetInput().SetButton(n,RETRO_DEVICE_ID_JOYPAD_B,(bool)input[InputConf::MapUtil::MapIndex_B]||(bool)input[InputConf::MapUtil::MapIndex_CDown]);
+            Frontend::App::GetInstance().GetInput().SetButton(n,RETRO_DEVICE_ID_JOYPAD_DOWN,(bool)input[InputConf::MapUtil::MapIndex_YAxisDown]);
+            Frontend::App::GetInstance().GetInput().SetButton(n,RETRO_DEVICE_ID_JOYPAD_UP,(bool)input[InputConf::MapUtil::MapIndex_YAxisUp]);
+            Frontend::App::GetInstance().GetInput().SetButton(n,RETRO_DEVICE_ID_JOYPAD_LEFT,(bool)input[InputConf::MapUtil::MapIndex_XAxisLeft]);
+            Frontend::App::GetInstance().GetInput().SetButton(n,RETRO_DEVICE_ID_JOYPAD_RIGHT,(bool)input[InputConf::MapUtil::MapIndex_XAxisRight]);
+            Frontend::App::GetInstance().GetInput().SetButton(n,RETRO_DEVICE_ID_JOYPAD_START,(bool)input[InputConf::MapUtil::MapIndex_Start]);
+            Frontend::App::GetInstance().GetInput().SetButton(n,RETRO_DEVICE_ID_JOYPAD_SELECT,(bool)input[InputConf::MapUtil::MapIndex_TrigZ]||(bool)input[InputConf::MapUtil::MapIndex_TrigR]||(bool)input[InputConf::MapUtil::MapIndex_TrigL]);
+        //    Frontend::App::GetInstance().GetInput().SetButton(0,RETRO_DEVICE_ID_JOYPAD_A,(bool)input[InputConf::MapUtil::MapIndex_A]);
+        //    Frontend::App::GetInstance().GetInput().SetButton(0,RETRO_DEVICE_ID_JOYPAD_A,(bool)input[InputConf::MapUtil::MapIndex_A]);
+        //    Frontend::App::GetInstance().GetInput().SetButton(0,RETRO_DEVICE_ID_JOYPAD_A,(bool)input[InputConf::MapUtil::MapIndex_A]);
+        }
+
+        Frontend::App::GetInstance().GetInput().Update(Frontend::App::GetInstance().GetCore());
+
+        for (int i = 0; i < RETRO_DEVICE_ID_JOYPAD_R3-1; i++)
+        {
+            if(i == RETRO_DEVICE_ID_JOYPAD_RIGHT
+            || i == RETRO_DEVICE_ID_JOYPAD_LEFT
+            || i == RETRO_DEVICE_ID_JOYPAD_DOWN
+            || i == RETRO_DEVICE_ID_JOYPAD_UP)
+                g_joy[n][i] = Frontend::App::GetInstance().GetInput().GetButton(n,i);
+            else
+                g_joy[n][i] = Frontend::App::GetInstance().GetInput().GetButtonDown(n,i);
+        }
     }
 }
 
 static int16_t core_input_state(unsigned port, unsigned device, unsigned index, unsigned id) {
-	if (port || index || device != RETRO_DEVICE_JOYPAD)
+	if (device != RETRO_DEVICE_JOYPAD)
 		return 0;
-
-	return g_joy[id];//Frontend::App::GetInstance().GetInput().GetButton(port,id);
+    if(g_joy[port][id])
+    {
+        Logger::Log(LogCategory::Debug,"Port ",std::to_string(port) + " " + std::to_string(g_joy[port][id]));
+    }
+	return g_joy[port][id];
 }
 
 static void core_audio_sample(int16_t left, int16_t right) {

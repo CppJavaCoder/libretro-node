@@ -10,6 +10,8 @@ namespace InputConf
 
     InputMap::InputMap(ContTab *t) : ctab(t)
     {}
+    InputMap::~InputMap()
+    {ctab=nullptr;}
 
     std::vector<u8> InputMap::Update()
     {
@@ -76,6 +78,12 @@ namespace InputConf
                 break;
             }
         return output;
+    }
+    bool InputMap::IsPlugged()
+    {
+        if(ctab == nullptr)
+            return false;
+        return ctab->m_plugged;
     }
 
 }
