@@ -254,6 +254,56 @@ Napi::Value GetGameInfo(const Napi::CallbackInfo& info)
     });
 }
 
+Napi::Value SetSaveSlot(const Napi::CallbackInfo& info)
+{
+    return SafeCall(info.Env(), [&info]() {
+        Frontend::App::GetInstance().GetCore().SetStateSlot(AsU32(info[0]));
+        return info.Env().Undefined();
+    });
+}
+Napi::Value LoadState(const Napi::CallbackInfo& info)
+{
+    return SafeCall(info.Env(), [&info]() {
+        Frontend::App::GetInstance().GetCore().LoadState();
+        return info.Env().Undefined();
+    });
+}
+Napi::Value LoadStateFromSlot(const Napi::CallbackInfo& info)
+{
+    return SafeCall(info.Env(), [&info]() {
+        Frontend::App::GetInstance().GetCore().LoadState(AsU32(info[0]));
+        return info.Env().Undefined();
+    });
+}
+Napi::Value LoadStateFromFile(const Napi::CallbackInfo& info)
+{
+    return SafeCall(info.Env(), [&info]() {
+        Frontend::App::GetInstance().GetCore().LoadState(AsStrUtf8(info[0]));
+        return info.Env().Undefined();
+    });
+}
+Napi::Value SaveState(const Napi::CallbackInfo& info)
+{
+    return SafeCall(info.Env(), [&info]() {
+        Frontend::App::GetInstance().GetCore().SaveState();
+        return info.Env().Undefined();
+    });
+}
+Napi::Value SaveStateToSlot(const Napi::CallbackInfo& info)
+{
+    return SafeCall(info.Env(), [&info]() {
+        Frontend::App::GetInstance().GetCore().SaveState(AsU32(info[0]));
+        return info.Env().Undefined();
+    });
+}
+Napi::Value SaveStateToFile(const Napi::CallbackInfo& info)
+{
+    return SafeCall(info.Env(), [&info]() {
+        Frontend::App::GetInstance().GetCore().SaveState(AsStrUtf8(info[0]));
+        return info.Env().Undefined();
+    });
+}
+
 Napi::Object BuildExports(Napi::Env env, Napi::Object exports)
 {
     exports.Set("Config", Config::BuildExports(env, Napi::Object::New(env)));
@@ -279,6 +329,13 @@ Napi::Object BuildExports(Napi::Env env, Napi::Object exports)
     exports.Set("cheatReset", Napi::Function::New(env, CheatReset));
     exports.Set("cheatSet", Napi::Function::New(env, CheatSet));
     exports.Set("getRegion", Napi::Function::New(env, GetRegion));
+    exports.Set("setStateSlot", Napi::Function::New(env, SetSaveSlot));
+    exports.Set("loadState", Napi::Function::New(env, LoadState));
+    exports.Set("loadStateFromSlot", Napi::Function::New(env, LoadStateFromSlot));
+    exports.Set("loadStateFromFile", Napi::Function::New(env, LoadStateFromFile));
+    exports.Set("saveState", Napi::Function::New(env, SaveState));
+    exports.Set("saveStateToSlot", Napi::Function::New(env, SaveStateToSlot));
+    exports.Set("saveStateToFile", Napi::Function::New(env, SaveStateToFile));
     exports.Set("pause", Napi::Function::New(env, Pause));
     exports.Set("resume", Napi::Function::New(env, Resume));
     exports.Set("advanceFrame", Napi::Function::New(env, AdvanceFrame));

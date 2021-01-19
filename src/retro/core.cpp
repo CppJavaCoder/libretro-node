@@ -43,6 +43,10 @@ Core::Core() {
     gameData = nullptr;
     changes = false;
     lastpath = "Shhhh, It's a secret to everyone!";
+    save_dir = "";
+    saveSlot = 0;
+    for(int n=0;n<9;n++)
+        states.push_back(nullptr);
 }
 
 Core::~Core()
@@ -52,6 +56,12 @@ Core::~Core()
         delete gameData;
         gameData = nullptr;
     }
+    for(std::vector<u8*>::iterator i = states.begin(); i != states.end(); i++)
+        if(*i != nullptr)
+        {
+            delete [] *i;
+            *i = nullptr;
+        }
 };
 
 void Core::LoadCore(const char *file)
@@ -116,6 +126,7 @@ void Core::Startup(const std::filesystem::path &config,const std::filesystem::pa
 {
     config_dir = config;
     data_dir = data;
+    SetSaveDir(data_dir);
 }
 void Core::Deinit()
 {
@@ -225,34 +236,121 @@ void Core::Resume()
 void Core::SetStateSlot(int slot)
 {
     //Todo, Implement SaveStates
+    saveSlot = slot;
 }
 void Core::LoadState()
 {
     //Todo, Implement SaveStates
+    LoadState(saveSlot);
 }
 void Core::LoadState(int slot)
 {
     //Todo, Implement SaveStates
+    if(slot >= states.size())
+        return;
+    if(states[slot] == nullptr)
+        return;
+    Logger::Log(LogCategory::Info,"SaveState",std::string("Loading from ") + std::to_string(slot));
+    u8 *dat = states[slot];
+    m_retro.retro_unserialize(states[slot],m_retro.retro_serialize_size());
 }
 void Core::LoadState(const std::filesystem::path& path)
 {
     //Todo, Implement SaveStates
+    if(path.generic_string() == "")
+        return;
+    Logger::Log(LogCategory::Info,"LoadState",std::string("Loading from ") + (path/"LibretroSaveState.ss").generic_string());
+    std::fstream mfile((path/"LibretroSaveState.ss").generic_string(),std::ios::in|std::ios::binary|std::ios::trunc);
+    for(int n=0;n<4;n++)
+    {
+        char *buf;
+        std::size_t size = m_retro.retro_get_memory_size(n);
+        mfile.read(buf,size);
+        u8 *dat = (u8*)buf;
+        RDRAMWriteBuffer(0x0,dat,m_retro.retro_get_memory_size(n),n);
+    }
+    mfile.close();
 }
 void Core::SaveState()
 {
     //Todo, Implement SaveStates
+    SaveState(saveSlot);
 }
 void Core::SaveState(int slot)
 {
     //Todo, Implement SaveStates
+    if(slot >= states.size())
+        return;
+    Logger::Log(LogCategory::Info,"SaveState",std::string("Saving to ") + std::to_string(slot));
+    if(states[slot] != nullptr)
+        delete [] states[slot];
+    states[slot] = new u8[m_retro.retro_serialize_size()];
+    m_retro.retro_serialize(states[slot],m_retro.retro_serialize_size());
 }
 void Core::SaveState(const std::filesystem::path& path)
 {
     //Todo, Implement SaveStates
+    if(path.generic_string() == "")
+        return;
+    Logger::Log(LogCategory::Info,"SaveState",std::string("Saving to ") + (path/"LibretroSaveState.ss").generic_string());
+    std::fstream mfile((path/"LibretroSaveState.ss").generic_string(),std::ios::out|std::ios::binary|std::ios::trunc);
+    void *data;
+    m_retro.retro_serialize(data,m_retro.retro_serialize_size());
+    mfile.write((char*)data,m_retro.retro_serialize_size());
+
+    mfile.close();
+}
+const std::filesystem::path Core::GetSaveDir()
+{
+    return save_dir;
+}
+void Core::SetSaveDir(const std::filesystem::path &path)
+{
+    save_dir = path;
 }
 void Core::AdvanceFrame()
 {
     Run();
+}
+bool Core::SaveGameData()
+{
+    if(save_dir == "")
+        return false;
+    std::ofstream mfile(save_dir/"SaveGameData.dat",std::ios::out|std::ios::trunc|std::ios::binary);
+
+    if(!mfile.is_open())
+        return false;
+
+    mfile.seekp(0,std::ios::beg);
+
+    mfile.write((char*)RDRAMReadBuffer(0,m_retro.retro_get_memory_size(RETRO_MEMORY_SAVE_RAM),RETRO_MEMORY_SAVE_RAM),m_retro.retro_get_memory_size(RETRO_MEMORY_SAVE_RAM));
+
+    mfile.close();
+    return true;
+}
+bool Core::LoadGameData()
+{
+    if(save_dir == "")
+        return false;
+    std::ifstream mfile(save_dir/"SaveGameData.dat",std::ios::in|std::ios::binary);
+
+    if(!mfile.is_open())
+        return false;
+    
+    std::size_t size;
+    mfile.seekg(0,std::ios::end);
+    size = mfile.tellg();
+    mfile.seekg(0,std::ios::beg);
+
+    u8 *dat = new u8[size];
+    mfile.read((char*)dat,size);
+
+    RDRAMWriteBuffer(0x0,(u8*)dat,size,RETRO_MEMORY_SAVE_RAM);
+    delete [] dat;
+    dat = nullptr;
+
+    mfile.close();
+    return true;
 }
 
 u8* Core::GetDRAMPtr()
@@ -272,43 +370,43 @@ std::size_t Core::GetROMSize()
     return gameSize;
 }
 
-u8 Core::RDRAMRead8(u32 addr)
+u8 Core::RDRAMRead8(u32 addr,int type)
 {
-    return ((u8*)m_retro.retro_get_memory_data(RETRO_MEMORY_SYSTEM_RAM))[addr];
+    return ((u8*)m_retro.retro_get_memory_data(type))[addr];
 }
-u16 Core::RDRAMRead16(u32 addr)
+u16 Core::RDRAMRead16(u32 addr,int type)
 {
-    return RDRAMRead8(addr+1) << 8 + RDRAMRead8(addr);
+    return RDRAMRead8(addr+1,type) << 8 + RDRAMRead8(addr,type);
 }
-u32 Core::RDRAMRead32(u32 addr)
+u32 Core::RDRAMRead32(u32 addr,int type)
 {
-    return RDRAMRead16(addr+2) << 16 + RDRAMRead16(addr);
+    return RDRAMRead16(addr+2,type) << 16 + RDRAMRead16(addr,type);
 }
-u8* Core::RDRAMReadBuffer(u32 addr, std::size_t len)
+u8* Core::RDRAMReadBuffer(u32 addr, std::size_t len,int type)
 {
     u8 *buf = new u8[len];
-    for(int n=0;n<len;n++)
-        buf[n] = RDRAMRead8(addr+n);
+    for(u32 n=0;n<len;n++)
+        buf[n] = RDRAMRead8(addr+n,type);
     return buf;
 }
-void Core::RDRAMWrite8(u32 addr, u8 val)
+void Core::RDRAMWrite8(u32 addr, u8 val,int type)
 {
-    ((u8*)m_retro.retro_get_memory_data(RETRO_MEMORY_SYSTEM_RAM))[addr] = val;
+    ((u8*)m_retro.retro_get_memory_data(type))[addr] = val;
 }
-void Core::RDRAMWrite16(u32 addr, u16 val)
+void Core::RDRAMWrite16(u32 addr, u16 val,int type)
 {
-    RDRAMWrite8(addr,(u8)val);
-    RDRAMWrite8(addr+1,(u8)val);
+    RDRAMWrite8(addr,(u8)val,type);
+    RDRAMWrite8(addr+1,(u8)val,type);
 }
-void Core::RDRAMWrite32(u32 addr, u32 val)
+void Core::RDRAMWrite32(u32 addr, u32 val,int type)
 {
-    RDRAMWrite16(addr,(u8)val);
-    RDRAMWrite16(addr+2,(u8)val);
+    RDRAMWrite16(addr,(u8)val,type);
+    RDRAMWrite16(addr+2,(u8)val,type);
 }
-void Core::RDRAMWriteBuffer(u32 addr, u8* buf, std::size_t len)
+void Core::RDRAMWriteBuffer(u32 addr, u8* buf, std::size_t len,int type)
 {
-    for(int n=0;n<len;n++)
-        RDRAMWrite8(addr+n,buf[n]);
+    for(u32 n=0;n<len;n++)
+        RDRAMWrite8(addr+n,buf[n],type);
 }
 u8 Core::ROMRead8(u32 addr)
 {
@@ -327,7 +425,7 @@ u32 Core::ROMRead32(u32 addr)
 u8* Core::ROMReadBuffer(u32 addr, std::size_t len)
 {
     u8 *buf = new u8[len];
-    for(int n=0;n<len;n++)
+    for(u32 n=0;n<len;n++)
         buf[n] = gameData[addr+n];
     return buf;
 }
@@ -347,7 +445,7 @@ void Core::ROMWrite32(u32 addr, u32 val)
 }
 void Core::ROMWriteBuffer(u32 addr, u8* buf, std::size_t len)
 {
-    for(int n=0;n<len;n++)
+    for(u32 n=0;n<len;n++)
         ROMWrite8(addr+n,buf[n]);
 }
 

@@ -387,25 +387,25 @@ export module Retro {
 
     export interface retro_game_geometry
     {
-       base_width: number;
-       base_height: number;
-       max_width: number;
-       max_height: number;
+       baseWidth: number;
+       baseHeight: number;
+       maxWidth: number;
+       maxHeight: number;
 
-       aspect_ratio: number;
-    };
+       aspectRatio: number;
+    }
 
     export interface retro_system_timing
     {
        fps: number;
-       sample_rate: number;
-    };
+       sampleRate: number;
+    }
 
     export interface retro_system_av_info
     {
         geometry: retro_game_geometry;
         timing: retro_system_timing;
-    };
+    }
 
     export interface retro_system_info
     {
@@ -416,6 +416,14 @@ export module Retro {
         blockExtract: boolean;
     }
 
+    export interface retro_game_info
+    {
+       path: string;
+	   data: Buffer;
+	   size: number;
+	   meta: string;
+    }
+	
 	export function loadCore(file: string): void;
 	export function unloadCore(): void;
 	export function loadGame(file: string): boolean;
@@ -432,14 +440,21 @@ export module Retro {
 	export function run(): void;
 	export function serializeSize(): number;
 	export function serialize(data: Buffer, size: number): boolean;
-	export function unserialize(const void *data, size_t size): boolean;
+	export function unserialize(data: Buffer, size: number): boolean;
 	export function cheatReset(): void;
 	export function cheatSet(index: number, enabled: boolean, code: string): void;
 	export function getRegion(): number;
-	export function getMemorySize(id: number);
+	export function getGameInfo(): retro_game_info;
 
     export function pause(): void;
     export function resume(): void;
+    export function setStateSlot(slot: number): void;
+    export function loadState(): void;
+    export function loadStateFromSlot(slot: number): void;
+    export function loadStateFromFile(path: string): void;
+    export function saveState(): void;
+    export function saveStateToSlot(slot: number): void;
+    export function saveStateToFile(path: string): void;
     export function advanceFrame(): void;
 }
 

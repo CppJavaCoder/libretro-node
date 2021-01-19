@@ -73,14 +73,14 @@ public:
     u8* GetROMPtr();
     std::size_t GetROMSize();
 
-    u8 RDRAMRead8(u32 addr);
-    u16 RDRAMRead16(u32 addr);
-    u32 RDRAMRead32(u32 addr);
-    u8* RDRAMReadBuffer(u32 addr, std::size_t len);
-    void RDRAMWrite8(u32 addr, u8 val);
-    void RDRAMWrite16(u32 addr, u16 val);
-    void RDRAMWrite32(u32 addr, u32 val);
-    void RDRAMWriteBuffer(u32 addr, u8* buf, std::size_t len);
+    u8 RDRAMRead8(u32 addr,int type = RETRO_MEMORY_SYSTEM_RAM);
+    u16 RDRAMRead16(u32 addr,int type = RETRO_MEMORY_SYSTEM_RAM);
+    u32 RDRAMRead32(u32 addr,int type = RETRO_MEMORY_SYSTEM_RAM);
+    u8* RDRAMReadBuffer(u32 addr, std::size_t len,int type = RETRO_MEMORY_SYSTEM_RAM);
+    void RDRAMWrite8(u32 addr, u8 val,int type = RETRO_MEMORY_SYSTEM_RAM);
+    void RDRAMWrite16(u32 addr, u16 val,int type = RETRO_MEMORY_SYSTEM_RAM);
+    void RDRAMWrite32(u32 addr, u32 val,int type = RETRO_MEMORY_SYSTEM_RAM);
+    void RDRAMWriteBuffer(u32 addr, u8* buf, std::size_t len,int type = RETRO_MEMORY_SYSTEM_RAM);
     u8 ROMRead8(u32 addr);
     u16 ROMRead16(u32 addr);
     u32 ROMRead32(u32 addr);
@@ -110,6 +110,12 @@ public:
 
     std::string GetROMHeader(RetroHeader::System sys);
     void GetRetroHeader(RetroHeader *hdr);
+
+    const std::filesystem::path GetSaveDir();
+    void SetSaveDir(const std::filesystem::path &path);
+
+    bool SaveGameData();
+    bool LoadGameData();
 
     class ConfigSection {
         friend Core;
@@ -178,10 +184,13 @@ private:
     u8 *gameData;
     std::size_t gameSize;
 
+    int saveSlot;
+    std::vector<u8*> states;
+
     bool changes;
     std::fstream mfile;
 
-    std::filesystem::path config_dir,data_dir;
+    std::filesystem::path config_dir,data_dir,save_dir;
     std::string lastpath;
     //std::fstream config_file,data_file;
 

@@ -388,10 +388,22 @@ void App::Execute()
     m_emu.execute = std::async(std::launch::async,[this]() {
     try{
         ImGuiSDL::Initialize(renderer_get(),inf.window_width,inf.window_height);
+        m_emu.core.LoadGameData();
         while(core_is_running()){
             m_emu.core.Run();
             core_refresh();
+            //Was for testing savestates
+/*            const Uint8 *keys = SDL_GetKeyboardState(NULL);
+            if(keys[SDL_SCANCODE_LALT] && keys[SDL_SCANCODE_1])
+                m_emu.core.LoadState(0);
+            else if(keys[SDL_SCANCODE_LALT] && keys[SDL_SCANCODE_2])
+                m_emu.core.LoadState(1);
+            else if(keys[SDL_SCANCODE_1])
+                m_emu.core.SaveState(0);
+            else if(keys[SDL_SCANCODE_2])
+                m_emu.core.SaveState(1);*/
         }
+        m_emu.core.SaveGameData();
         ImGuiSDL::Deinitialize();
         CoreStoppedHandler();
     }catch(const std::exception& e)
