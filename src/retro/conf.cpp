@@ -385,7 +385,7 @@ bool Core::ConfigSection::GetBool(const std::string& name)
 {
     for(std::vector<Param>::iterator i = params.begin(); i != params.end(); i++)
         if((*i).name == name)
-            return ToLower((*i).value) == "true";
+            return (*i).value == "True";
     //return m_core->m_ld->ConfigGetParamBool(m_handle, name.c_str());
     return false;
 }
@@ -394,7 +394,7 @@ bool Core::ConfigSection::GetBoolOr(const std::string& name, bool value)
 {
     for(std::vector<Param>::iterator i = params.begin(); i != params.end(); i++)
         if((*i).name == name)
-            return ToLower((*i).value) == "true";
+            return (*i).value == "True";
     return value;
 }
 
