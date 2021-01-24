@@ -22,10 +22,9 @@
 #include <vector>
 
 #include <nano_signal_slot.hpp>
-
 #include "frontend/input_conf/input_map.h"
-
-#include "retro_bound.h"
+#include "retro/retro_bound.h"
+#include "retro/sprite.h"
 
 struct ImFont;
 
@@ -115,7 +114,20 @@ public:
     void BindingBeforeRender();
     void BindingAfterRender();
 
+    int CreateSprite(std::string fname,int w,int h,int cols,int rows);
+    int CreateSprite(SDL_Surface *srf,int w,int h,int cols,int rows);
+    int CreateSprite(void *pixels,int pitch,int w,int h,int cols,int rows);
+    int CreateSprite(int index);
+
+    int GetSpriteNum();
+
+    RETRO::Sprite *GetSprite(int index);
+    void RemoveSprite(int index);
+
+    void PushBackCommand(std::string name,int id,std::vector<std::string> values,std::vector<int> ivalues);
 private:
+    std::vector<RETRO::Sprite*> spr;
+    std::vector<RETRO::Sprite::Command> cmd;
     StartInfo inf;
     struct SdlInit {
         SDL::SDLInit sdl;

@@ -23,6 +23,10 @@ namespace InputConf
 
         //None, Key, JoyButton, JoyHat, JoyAxis
         for (int i = 0; i < MapIndex_Count; ++i)
+        {
+            if(ctab == nullptr || ctab->m_map.size() <= 0)
+                continue;
+            ctab->m_map[i];
             switch(ctab->m_map[i].type)
             {
                 default:
@@ -32,6 +36,8 @@ namespace InputConf
                         output[i] = 1;
                 break;
                 case MapType::JoyHat:
+                    if(ctab->m_joystick.Get() == NULL)
+                        break;
                     if(ctab->m_map[i].jhat.dir == JoyHatDir::Right && ctab->m_joystick.GetHat(ctab->m_map[i].jhat.hat) & SDL_HAT_RIGHT)
                         output[i] = 1;
                     if(ctab->m_map[i].jhat.dir == JoyHatDir::Left && ctab->m_joystick.GetHat(ctab->m_map[i].jhat.hat) & SDL_HAT_LEFT)
@@ -42,10 +48,14 @@ namespace InputConf
                         output[i] = 1;
                 break;
                 case MapType::JoyButton:
+                    if(ctab->m_joystick.Get() == NULL)
+                        break;
                     if(ctab->m_joystick.GetButton(ctab->m_map[i].jbutton.button))
                         output[i] = 1;
                 break;
                 case MapType::JoyAxis:
+                    if(ctab->m_joystick.Get() == NULL)
+                        break;
                     bool in_range = ctab->m_joystick.GetAxis(ctab->m_map[i].jaxis.axis) < ctab->m_joy_init_axes[ctab->m_map[i].jaxis.axis] - 18000
                         || ctab->m_joystick.GetAxis(ctab->m_map[i].jaxis.axis) > ctab->m_joy_init_axes[ctab->m_map[i].jaxis.axis] + 18000;
                     if(in_range && ctab->m_map[i].jaxis.dir == MapUtil::JoyAxisDir::Positive && ctab->m_joystick.GetAxis(ctab->m_map[i].jaxis.axis))
@@ -68,7 +78,6 @@ namespace InputConf
                     }
                     else if(in_range && ctab->m_map[i].jaxis.dir == MapUtil::JoyAxisDir::Negative && ctab->m_joystick.GetAxis(ctab->m_map[i].jaxis.axis))
                     {
-                        Logger::Log(LogCategory::Debug,"CTRL","Negative");
                         int value = -ctab->m_joystick.GetAxis(ctab->m_map[i].jaxis.axis)/129;
                         if(value > 0)
                             output[i] = value;
@@ -77,6 +86,7 @@ namespace InputConf
                     }
                 break;
             }
+        }
         return output;
     }
     bool InputMap::IsPlugged()

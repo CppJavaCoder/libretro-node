@@ -17,6 +17,8 @@
 
 #include <fmt/format.h>
 
+#include "sprite.h"
+
 using namespace Param;
 
 namespace Addon::Frontend {
@@ -599,6 +601,8 @@ Napi::Object BuildExports(Napi::Env env, Napi::Object exports)
     exports.Set("openMemViewer", Napi::Function::New(env, OpenMemViewer));
     exports.Set("closeMemViewer", Napi::Function::New(env, CloseMemViewer));
     exports.Set("isMemViewerOpen", Napi::Function::New(env, IsMemViewerOpen));
+
+    exports.Set("Sprite", Sprite::BuildExports(env, Napi::Object::New(env)));
 
     return exports;
 }

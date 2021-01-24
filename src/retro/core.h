@@ -40,7 +40,7 @@ public:
 	bool Unserialize(const void *data, size_t size);
 	void CheatReset(void);
 	void CheatSet(unsigned index, bool enabled, const char *code);
-	bool LoadGame(const struct retro_game_info *game);
+	bool LoadGame(const struct retro_game_info *game,std::vector<u8> newData);
 	bool LoadGameSpecial(unsigned game_type, const struct retro_game_info *info, size_t num_info);
 	void UnloadGame();
 	unsigned GetRegion(void);
@@ -93,7 +93,7 @@ public:
     void ContSetInput(u32 controller,unsigned int value);
     unsigned int ContGetInput(u32 controller);
 
-    void SetGame(void *data,std::size_t size);
+    //void SetGame(void *data,std::size_t size);
 
     void ConfigSaveFile();
     bool ConfigHasUnsavedChanges();
@@ -178,11 +178,11 @@ public:
     std::filesystem::path GetUserCachePath();
 
 private:
+    struct retro_game_info ginf;
     bool support_no_game;
     bool pause;
-    struct retro_game_info currentGame;
-    u8 *gameData;
-    std::size_t gameSize;
+    std::vector<u8> gameData;
+    //std::size_t gameSize;
 
     int saveSlot;
     std::vector<u8*> states;

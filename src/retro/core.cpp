@@ -35,27 +35,24 @@ Core::Core() {
     SetAudioSample = NULL;
     SetAudioSampleBatch = NULL;
     pause = false;
-    currentGame.data = NULL;
-    currentGame.meta = "";
-    currentGame.path = "";
-    currentGame.size = 0;
-    gameSize = 0;
-    gameData = nullptr;
+    //gameSize = 0;
+    //gameData = nullptr;
     changes = false;
     lastpath = "Shhhh, It's a secret to everyone!";
     save_dir = "";
     saveSlot = 0;
+    memset(&m_retro, 0, sizeof(m_retro));
     for(int n=0;n<9;n++)
         states.push_back(nullptr);
+    
+    ginf.data = NULL;
+    ginf.path = "";
+    ginf.meta = "";
+    ginf.size = 0;
 }
 
 Core::~Core()
 {
-    if(gameData != nullptr)
-    {
-        delete gameData;
-        gameData = nullptr;
-    }
     for(std::vector<u8*>::iterator i = states.begin(); i != states.end(); i++)
         if(*i != nullptr)
         {
@@ -188,20 +185,22 @@ void Core::CheatSet(unsigned index, bool enabled, const char *code)
     Logger::Log(LogCategory::Debug,std::string("Cheat Code ")+std::to_string(index)+" "+code,std::string("Is ") + (enabled ? "Enabled" : "Disabled"));
     m_retro.retro_cheat_set(index,enabled,code);
 }
-bool Core::LoadGame(const struct retro_game_info *game)
+bool Core::LoadGame(const struct retro_game_info *game,std::vector<u8> newData)
 {
-    currentGame.data = game->data;
-    currentGame.meta= game->meta;
-    currentGame.path = game->path;
-    currentGame.size = game->size;
-    return m_retro.retro_load_game(game);
+    gameData.clear();
+    gameData = newData;
+    //for(u32 n=0; n < game->size; n++)
+    //    gameData.push_back(((u8*)game->data)[n]);
+    ginf.data = gameData.data();
+    ginf.size = gameData.size();
+    ginf.path = game->path;
+    ginf.meta = game->meta;
+    for(int n=0;n<20;n++)
+        Logger::Log(LogCategory::Debug,"Peeking at data",std::to_string(((u8*)ginf.data)[n])+ " " + std::to_string(((u8*)game->data)[n]));
+    return m_retro.retro_load_game(&ginf);
 }
 bool Core::LoadGameSpecial(unsigned game_type, const struct retro_game_info *info, size_t num_info)
 {
-    currentGame.data = info->data;
-    currentGame.meta = info->meta;
-    currentGame.path = info->path;
-    currentGame.size = info->size;
     return m_retro.retro_load_game_special(game_type,info,num_info);
 }
 void Core::UnloadGame()
@@ -214,7 +213,11 @@ unsigned Core::GetRegion()
 }
 retro_game_info *Core::GetGameInfo()
 {
-    return &currentGame;
+    ginf.data = gameData.data();
+    ginf.size = gameData.size();
+    ginf.path = "";
+    ginf.meta = "";
+    return &ginf;
 }
 void Core::SetNeedGameSupport(bool s)
 {
@@ -332,23 +335,36 @@ bool Core::LoadGameData()
 {
     if(save_dir == "")
         return false;
-    std::ifstream mfile(save_dir/"SaveGameData.dat",std::ios::in|std::ios::binary);
+    Logger::Log(LogCategory::Debug,"Inner Marker","1");
+    std::ifstream mfile;
+    mfile.exceptions(0);
+    mfile.open(save_dir/"SaveGameData.dat",std::ios::in|std::ios::binary);
 
-    if(!mfile.is_open())
+    Logger::Log(LogCategory::Debug,"Inner Marker","2");
+    if(!mfile.is_open() || !mfile.good())
         return false;
     
+    Logger::Log(LogCategory::Debug,"Inner Marker","3");
     std::size_t size;
     mfile.seekg(0,std::ios::end);
     size = mfile.tellg();
     mfile.seekg(0,std::ios::beg);
 
-    u8 *dat = new u8[size];
+    Logger::Log(LogCategory::Debug,"Inner Marker","4");
+    void *dat = SDL_malloc(size);
     mfile.read((char*)dat,size);
 
-    RDRAMWriteBuffer(0x0,(u8*)dat,size,RETRO_MEMORY_SAVE_RAM);
-    delete [] dat;
-    dat = nullptr;
+    Logger::Log(LogCategory::Debug,"Inner Marker","5");
+    RDRAMWriteBuffer(0x0,(u8*)dat,m_retro.retro_get_memory_size(RETRO_MEMORY_SAVE_RAM),RETRO_MEMORY_SAVE_RAM);
+    
+    Logger::Log(LogCategory::Debug,"Inner Marker","6");
+    if(dat)
+    {
+        SDL_free(dat);
+        dat = NULL;
+    }
 
+    Logger::Log(LogCategory::Debug,"Inner Marker","7");
     mfile.close();
     return true;
 }
@@ -363,11 +379,11 @@ std::size_t Core::GetDRAMSize()
 }
 u8* Core::GetROMPtr()
 {
-    return (u8*)gameData;
+    return gameData.data();
 }
 std::size_t Core::GetROMSize()
 {
-    return gameSize;
+    return gameData.size();//gameSize;
 }
 
 u8 Core::RDRAMRead8(u32 addr,int type)
@@ -410,7 +426,7 @@ void Core::RDRAMWriteBuffer(u32 addr, u8* buf, std::size_t len,int type)
 }
 u8 Core::ROMRead8(u32 addr)
 {
-    if(gameData != NULL)
+    if(gameData.size() > addr)
         return gameData[addr];
     return 0;
 }
@@ -459,6 +475,7 @@ unsigned int Core::ContGetInput(u32 controller)
     //Logger::Log(LogCategory::Debug,"ContGetInput",std::string("Controller ") + std::to_string(controller) + " Value "+std::to_string(ctrl_b[controller]));
     return ctrl_b[controller];
 }
+/*
 void Core::SetGame(void *data,std::size_t size)
 {
     if(gameData != nullptr)
@@ -469,7 +486,7 @@ void Core::SetGame(void *data,std::size_t size)
     gameSize = size;
     gameData = new u8[size];
     gameData = (u8*)data;
-}
+}*/
 
 std::string Core::GetROMHeader(RetroHeader::System sys)
 {

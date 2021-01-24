@@ -61,6 +61,26 @@ export module Frontend {
     export function openMemViewer(): void;
     export function closeMemViewer(): void;
     export function isMemViewerOpen(): boolean;
+
+    export module Sprite{
+        export function fromImage(imFile: string,w: number,h: number,cols: number,rows: number): number;
+        export function fromSurface(srf: Buffer,w: number,h: number,cols: number,rows: number): number;
+        export function fromBuffer(pixels: Buffer,pitch: number,w: number,h: number,cols: number,rows: number): number;
+        export function remove(index: number): void;
+        export function setFrame(index: number,frame: number): void;
+        export function animate(index: number,from: number,to: number,time: number): void;
+        export function setPos(index: number,x: number,y: number): void;
+        export function replaceColor(index: number,r1: number,g1: number,b1:number,r2: number,g2: number,b2:number): void;
+        export function replaceColour(index: number,r1: number,g1: number,b1:number,r2: number,g2: number,b2:number): void;
+        export function getX(index: number): number;
+        export function getY(index: number): number;
+        export function getW(index: number): number;
+        export function getH(index: number): number;
+        export function setHFlip(index: number,flip: boolean): void;
+        export function setVFlip(index: number,flip: boolean): void;
+        export function setFG(index: number,fg: boolean): void;
+        export function getFG(index: number): boolean;
+    }
 }
 
 export module Retro {

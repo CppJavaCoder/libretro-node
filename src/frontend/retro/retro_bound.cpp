@@ -8,6 +8,8 @@
 
 static SDL_Renderer *g_rnd = NULL;
 static SDL_Texture *g_txt = NULL;
+static SDL_Surface *g_srf = NULL;
+static SDL_Texture *g_screen = NULL;
 
 static SDL_AudioDeviceID g_pcm = 0;
 static struct retro_frame_time_callback runloop_frame_time;
@@ -23,7 +25,7 @@ static bool resized = false;
 
 static struct retro_variable *g_vars = NULL;
 
-
+static u32 base_width=0,base_height=0;
 
 struct keymap {
 	unsigned k;
@@ -47,19 +49,42 @@ static void die(const char *fmt, ...) {
 
 static void video_init(void)
 {
-    g_rnd = SDL_CreateRenderer(Frontend::App::GetInstance().GetMainWindow().Get(),0,SDL_RENDERER_ACCELERATED|SDL_RENDERER_PRESENTVSYNC);
-    if(g_txt == NULL)
-        g_txt = SDL_CreateTexture(g_rnd,SDL_GetWindowPixelFormat(Frontend::App::GetInstance().GetMainWindow().Get()),SDL_TEXTUREACCESS_TARGET,256,232);
+    g_rnd = SDL_CreateRenderer(Frontend::App::GetInstance().GetMainWindow().Get(),0,SDL_RENDERER_ACCELERATED|SDL_RENDERER_PRESENTVSYNC|SDL_RENDERER_TARGETTEXTURE);
 }
 
 static SDL_Renderer *renderer_get(void)
 {
     return g_rnd;
 }
-
+static SDL_Texture *texture_get(void)
+{
+    return g_txt;
+}
+static SDL_Texture *texture_get_screen(void)
+{
+    return g_screen;
+}
 static void core_stop(void)
 {
     running = false;
+}
+static void video_deinit(void)
+{
+    if(g_txt != NULL)
+    {
+        SDL_DestroyTexture(g_txt);
+        g_txt = NULL;
+    }
+    if(g_screen != NULL)
+    {
+        SDL_DestroyTexture(g_screen);
+        g_screen = NULL;
+    }
+    if(g_srf != NULL)
+    {
+        SDL_FreeSurface(g_srf);
+        g_srf = NULL;
+    }
 }
 
 static void variables_free(void)
@@ -92,9 +117,52 @@ static bool video_set_pixel_format(unsigned format) {
 	return true;
 }
 
+static inline void Reformat(const void *od,void **nd,unsigned width,unsigned height,unsigned opitch)
+{
+    u8 r,g,b;
+    u16 val;
+    SDL_PixelFormat *wFormat = SDL_AllocFormat(SDL_GetWindowPixelFormat(Frontend::App::GetInstance().GetMainWindow().Get()));
+    for(u64 n=0;n<width*height;n++)
+    {
+        val = ((u16*)od)[n+(n/width)*(width+(opitch-(width*4))/2)];
+        r = ((((val >> 11) & 0x1F) * 527) + 23) >> 6;
+        g = ((((val >> 5)&0x3F) * 259) + 33) >> 6;//64
+        b = (((val & 0x1F) * 527) + 23) >> 6;//32
+        ((u32*)*nd)[n] = SDL_MapRGB(wFormat,r,g,b);
+    }
+    if(wFormat)
+        SDL_FreeFormat(wFormat);
+    wFormat = NULL;
+} 
+static int increment = 0;
 static void video_refresh(const void *data, unsigned width, unsigned height, unsigned pitch) {
     if (data && data != RETRO_HW_FRAME_BUFFER_VALID) {
-        SDL_UpdateTexture(g_txt,NULL,(void*)data,pitch);
+        
+        if(!g_srf || g_srf->w != width || g_srf->h != height)
+        {
+            if(g_srf != NULL)
+                SDL_FreeSurface(g_srf);
+            g_srf = SDL_CreateRGBSurfaceWithFormat(SDL_SWSURFACE,width,height,32,SDL_GetWindowPixelFormat(Frontend::App::GetInstance().GetMainWindow().Get()));
+            if(g_txt != NULL)
+                SDL_DestroyTexture(g_txt);
+            g_txt = SDL_CreateTexture(g_rnd,SDL_GetWindowPixelFormat(Frontend::App::GetInstance().GetMainWindow().Get()),SDL_TEXTUREACCESS_TARGET,width,height);
+        
+            if(g_screen != NULL)
+                SDL_DestroyTexture(g_screen);
+            g_screen = SDL_CreateTexture(g_rnd,SDL_GetWindowPixelFormat(Frontend::App::GetInstance().GetMainWindow().Get()),SDL_TEXTUREACCESS_STREAMING,width,height);
+            SDL_SetTextureBlendMode(g_txt,SDL_BLENDMODE_BLEND);
+            SDL_SetTextureBlendMode(g_screen,SDL_BLENDMODE_BLEND);
+        }
+
+        Reformat(data,&g_srf->pixels,width,height,pitch);
+        const Uint8 *keys = SDL_GetKeyboardState(NULL);
+        if(keys[SDL_SCANCODE_A])
+            increment++;
+        if(keys[SDL_SCANCODE_B])
+            increment--;
+        if(keys[SDL_SCANCODE_C])
+            Logger::Log(LogCategory::Debug,"Found it",std::to_string((width*4)+increment));
+        SDL_UpdateTexture(g_screen,NULL,g_srf->pixels,(width*4)+increment);
         Frontend::App::GetInstance().SwapHandler();
         Frontend::App::GetInstance().NewFrameHandler();
 	}
@@ -170,6 +238,7 @@ static void core_log(enum retro_log_level level, const char *fmt, ...) {
 }
 
 static bool core_environment(unsigned cmd, void *data) {
+    Logger::Log(LogCategory::Debug, "Joe's debug", "I'm going in");
 	switch (cmd) {
     case RETRO_ENVIRONMENT_SET_SUBSYSTEM_INFO: {
         const struct retro_subsystem_info *inf = (const struct retro_subsystem_info *)data;
@@ -294,8 +363,8 @@ static bool core_environment(unsigned cmd, void *data) {
     }
     case RETRO_ENVIRONMENT_SET_GEOMETRY: {
         const struct retro_game_geometry *geom = (const struct retro_game_geometry *)data;
-        //geom->base_width; This is what our texture should be
-        //geom->base_height;
+        //base_width = geom->base_width;
+        //base_height = geom->base_height;
         return true;
     }
     case RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME: {
@@ -317,12 +386,13 @@ static bool core_environment(unsigned cmd, void *data) {
 
 
 static void core_video_refresh(const void *data, unsigned width, unsigned height, size_t pitch) {
+    Logger::Log(LogCategory::Debug,"VR","Video Refresh");
     video_refresh(data, width, height, pitch);
 }
 
 
 static void core_input_poll(void) {
-
+    Logger::Log(LogCategory::Debug, "Joe's debug", "I'm going into input");
     const Uint8 *keys = SDL_GetKeyboardState(NULL);
     if(keys[SDL_SCANCODE_ESCAPE])
         running = false;
@@ -338,6 +408,8 @@ static void core_input_poll(void) {
         {
             Frontend::App::GetInstance().GetInput().SetButton(n,RETRO_DEVICE_ID_JOYPAD_A,(bool)input[InputConf::MapUtil::MapIndex_A]||(bool)input[InputConf::MapUtil::MapIndex_CRight]);
             Frontend::App::GetInstance().GetInput().SetButton(n,RETRO_DEVICE_ID_JOYPAD_B,(bool)input[InputConf::MapUtil::MapIndex_B]||(bool)input[InputConf::MapUtil::MapIndex_CDown]);
+            Frontend::App::GetInstance().GetInput().SetButton(n,RETRO_DEVICE_ID_JOYPAD_X,(bool)input[InputConf::MapUtil::MapIndex_CLeft]);
+            Frontend::App::GetInstance().GetInput().SetButton(n,RETRO_DEVICE_ID_JOYPAD_Y,(bool)input[InputConf::MapUtil::MapIndex_CUp]);
             Frontend::App::GetInstance().GetInput().SetButton(n,RETRO_DEVICE_ID_JOYPAD_DOWN,(bool)input[InputConf::MapUtil::MapIndex_YAxisDown]);
             Frontend::App::GetInstance().GetInput().SetButton(n,RETRO_DEVICE_ID_JOYPAD_UP,(bool)input[InputConf::MapUtil::MapIndex_YAxisUp]);
             Frontend::App::GetInstance().GetInput().SetButton(n,RETRO_DEVICE_ID_JOYPAD_LEFT,(bool)input[InputConf::MapUtil::MapIndex_XAxisLeft]);
@@ -353,29 +425,34 @@ static void core_input_poll(void) {
 
         for (int i = 0; i < RETRO_DEVICE_ID_JOYPAD_R3-1; i++)
         {
-            if(i == RETRO_DEVICE_ID_JOYPAD_RIGHT
-            || i == RETRO_DEVICE_ID_JOYPAD_LEFT
-            || i == RETRO_DEVICE_ID_JOYPAD_DOWN
-            || i == RETRO_DEVICE_ID_JOYPAD_UP)
+            //if(i == RETRO_DEVICE_ID_JOYPAD_RIGHT
+            //|| i == RETRO_DEVICE_ID_JOYPAD_LEFT
+            //|| i == RETRO_DEVICE_ID_JOYPAD_DOWN
+            //|| i == RETRO_DEVICE_ID_JOYPAD_UP)
                 g_joy[n][i] = Frontend::App::GetInstance().GetInput().GetButton(n,i);
-            else
-                g_joy[n][i] = Frontend::App::GetInstance().GetInput().GetButtonDown(n,i);
+            //else
+              //  g_joy[n][i] = Frontend::App::GetInstance().GetInput().GetButtonDown(n,i);
         }
     }
+    Logger::Log(LogCategory::Debug, "Joe's debug", "I'm going out of input");
 }
 
 static int16_t core_input_state(unsigned port, unsigned device, unsigned index, unsigned id) {
-	if (device != RETRO_DEVICE_JOYPAD)
+	if (device != RETRO_DEVICE_JOYPAD || port > 3)
 		return 0;
+    Logger::Log(LogCategory::Debug, "Joe's debug", "Nab the input state");
 	return g_joy[port][id];
 }
 
 static void core_audio_sample(int16_t left, int16_t right) {
+    Logger::Log(LogCategory::Debug, "Joe's debug", "Audio Sample?");
 	int16_t buf[2] = {left, right};
 	audio_write(buf, 1);
+    Logger::Log(LogCategory::Debug, "Joe's debug", "Nope");
 }
 
 static size_t core_audio_sample_batch(const int16_t *data, size_t frames) {
+    Logger::Log(LogCategory::Debug, "Joe's debug", "Audio Sample Batch?");
 	return audio_write(data, frames);
 }
 
@@ -383,28 +460,15 @@ retro_time_t cpu_features_get_time_usec(void) {
     return (retro_time_t)SDL_GetTicks();
 }
 
-static void core_render(void)
+static void core_render(const SDL_Rect &a)
 {
-    SDL_Rect a;
-    a.x = 0;
-    a.y = 0;
-    a.w = 256;
-    a.h = 232;
-    while(a.w*2 < Frontend::App::GetInstance().GetMainWindow().GetWidth() && a.h*2 < Frontend::App::GetInstance().GetMainWindow().GetHeight())
+    Logger::Log(LogCategory::Debug, "Joe's debug", "Core Render?");
+    if(g_rnd != NULL)
     {
-        a.w*=2;
-        a.h*=2;
-    };
-    a.x += Frontend::App::GetInstance().GetMainWindow().GetWidth()/2;
-    a.x -= a.w/2;
-    a.y += Frontend::App::GetInstance().GetMainWindow().GetHeight()/2;
-    a.y -= a.h/2;
-    Frontend::App::GetInstance().GetMainWindow().GetHeight();
-
-    SDL_SetRenderTarget(g_rnd,NULL);
-    SDL_SetRenderDrawColor(g_rnd,64,64,64,255);
-    SDL_RenderFillRect(g_rnd,NULL);
-    SDL_RenderCopy(g_rnd,g_txt,NULL,&a);
+        if(g_txt != NULL)
+            SDL_RenderCopy(g_rnd,g_txt,NULL,&a);
+    }
+    Logger::Log(LogCategory::Debug, "Joe's debug", "Nope");
 }
 static void core_present(void)
 {
@@ -413,6 +477,7 @@ static void core_present(void)
 
 static void core_refresh(void)
 {
+    Logger::Log(LogCategory::Debug, "Joe's debug", "Refresh?");
     // Update the game loop timer.
     if (runloop_frame_time.callback) {
         retro_time_t current = cpu_features_get_time_usec();
@@ -427,9 +492,19 @@ static void core_refresh(void)
     if (audio_callback.callback) {
         audio_callback.callback();
     }
+    Logger::Log(LogCategory::Debug, "Joe's debug", "Refreshed");
 }
 
 static bool core_is_running(void)
 {
     return running;
+}
+
+Uint32 screen_w(void)
+{
+    return g_srf->w;
+}
+Uint32 screen_h(void)
+{
+    return g_srf->h;
 }

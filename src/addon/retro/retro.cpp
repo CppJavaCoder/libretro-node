@@ -8,7 +8,10 @@
 #include "common/file_util.h"
 
 #include <fmt/format.h>
+#include <cstring>
+#include <cerrno>
 
+#include <fstream>
 #include <SDL2/SDL_endian.h>
 #include <SDL2/SDL.h>
 
@@ -146,18 +149,73 @@ Napi::Value CheatSet(const Napi::CallbackInfo& info)
 Napi::Value LoadGame(const Napi::CallbackInfo& info)
 {
     return SafeCall(info.Env(), [&info]() {
-        retro_game_info inf;
+        struct retro_game_info inf;
+        //Todo, Move most of this into Core
+        errno = 0;
+        std::ifstream mfile;
+        mfile.exceptions(0);
+        mfile.open(AsStrUtf8(info[0]),std::ios::in|std::ios::binary);
+        if(!mfile.is_open() || !mfile.good())
+        {
+            Logger::Log(LogCategory::Fatal,"Retro",std::string("Failed loading file ") + std::strerror(errno));
+            return FromBool(info.Env(),false);
+        }
 
+        inf.data = NULL;
         inf.path = AsStrUtf8(info[0]).c_str();
         inf.meta = "";
+        inf.size = 0;
+
+        mfile.seekg(std::ios::end,0);
+        inf.size = mfile.tellg();
+        mfile.seekg(std::ios::beg,0);
+
+        std::vector<char> bytes(std::istreambuf_iterator<char>(mfile),(std::istreambuf_iterator<char>()));
+
+        inf.data = bytes.data();
+        if(!inf.data)
+        {
+            Logger::Log(LogCategory::Fatal,"Retro",std::string("Failed allocating memory!"));
+            return FromBool(info.Env(),false);
+        }
+        //SDL_memset((void*)inf.data,0,inf.size);
+        //mfile.read((char*)inf.data,inf.size);
+        //Frontend::App::GetInstance().GetCore().SetGame((void*)inf.data,inf.size);
+        {
+            std::vector<u8> ibytes(std::begin(bytes),std::end(bytes));
+            Frontend::App::GetInstance().GetCore().LoadGame(&inf,ibytes);
+        }
+
+        mfile.close();
+
+        /*bool success = false;
+        struct retro_game_info inf;
+
         inf.data = NULL;
+        inf.path = AsStrUtf8(info[0]).c_str();
+        inf.meta = "";
         inf.size = 0;
 
         if (inf.path) {
-                SDL_RWops *file = SDL_RWFromFile(inf.path, "rb");
-                Sint64 size;
+            SDL_RWops *file = NULL;
+            for(int n = 0; n < 20; n++)
+            {
+                file = SDL_RWFromFile(inf.path, "rb");
+                if(file)
+                    continue;
+                else
+                    SDL_Delay(100);                
+            }
+            if(!file)
+            {
+                Logger::Log(LogCategory::Fatal,"Retro","Failed loading file");
+                exit(-1);
+            }
+            else
+                Logger::Log(LogCategory::Info,"Retro","File has been loaded");
+            Sint64 size;
 
-                size = SDL_RWsize(file);
+            size = SDL_RWsize(file);
 
             inf.size = size;
             inf.data = SDL_malloc(inf.size);
@@ -166,11 +224,13 @@ Napi::Value LoadGame(const Napi::CallbackInfo& info)
             SDL_RWread(file, (void*)inf.data, inf.size, 1);
 
             Frontend::App::GetInstance().GetCore().SetGame((u8*)inf.data,inf.size);
-
             SDL_RWclose(file);
         }
+        Frontend::App::GetInstance().GetCore().LoadGame(&inf);
+        if(inf.data)
+            SDL_free((void*)inf.data);
 
-        return FromBool(info.Env(),Frontend::App::GetInstance().GetCore().LoadGame(&inf));
+        return FromBool(info.Env(),success);*/
     });
 }
 Napi::Value LoadGameSpecial(const Napi::CallbackInfo& info)
@@ -307,7 +367,7 @@ Napi::Value SaveStateToFile(const Napi::CallbackInfo& info)
 Napi::Object BuildExports(Napi::Env env, Napi::Object exports)
 {
     exports.Set("Config", Config::BuildExports(env, Napi::Object::New(env)));
-    exports.Set("Input", Config::BuildExports(env, Napi::Object::New(env)));
+    exports.Set("Input", Input::BuildExports(env, Napi::Object::New(env)));
     exports.Set("Memory", Memory::BuildExports(env, Napi::Object::New(env)));
 
     exports.Set("loadCore", Napi::Function::New(env, LoadCore));

@@ -16,16 +16,23 @@
 #include <chrono>
 #include <iostream>
 #include <sstream>
+#include <algorithm>
 
 #include <fmt/format.h>
 //#include <GL/glew.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 
-//Retro bound must define core functions before we use them
-#include "retro_bound.cpp"
+//It bothers me that I have to do this
+#include "retro/retro_bound.cpp"
+#include "retro/sprite.cpp"
 
 namespace Frontend {
+
+inline bool HigherSprite(RETRO::Sprite& a,RETRO::Sprite& b)
+{
+    return a.GetY() > b.GetY();
+}
 
 App::App()
 {
@@ -53,6 +60,17 @@ App::~App()
             delete map[n];
             map[n] = nullptr;
         }
+    
+    for(std::vector<RETRO::Sprite*>::iterator i=spr.begin();i!=spr.end();i++)
+    {
+        if((*i) != nullptr)
+        {
+            delete *i;
+            *i = nullptr;
+        }
+    }
+    spr.clear();
+
     m_sdl_init.ttf.Quit();
     m_sdl_init.img.Quit();
     m_sdl_init.sdl.Quit();
@@ -88,6 +106,7 @@ void App::InitVideo(const StartInfo& info)
     m_video.imgui.RebuildFontAtlas();
 
     Frontend::App::GetInstance().NewVIHandler();
+    Logger::Log(LogCategory::Debug, "VideoInit", "Exit");
 }
 
 void App::DeinitVideo()
@@ -369,11 +388,14 @@ void App::Startup(const StartInfo& info)
     InitVideo(info);
     // Not currently needed afaik
     //InitFrameCapture();
+    Logger::Log(LogCategory::Debug, "Startup", "InitEmu");
     InitEmu(info);
+    Logger::Log(LogCategory::Debug, "Startup", "Done");
     CoreStartedHandler();
     LoadCheats();
 
     CreateResourcesNextVi();
+    Logger::Log(LogCategory::Debug, "Startup", "Exit");
 }
 
 void App::Shutdown()
@@ -387,24 +409,51 @@ void App::Execute()
 {
     m_emu.execute = std::async(std::launch::async,[this]() {
     try{
+        Logger::Log(LogCategory::Info,"Marker","0");
         ImGuiSDL::Initialize(renderer_get(),inf.window_width,inf.window_height);
+
+        Logger::Log(LogCategory::Info,"Marker","1");
+                
+        Logger::Log(LogCategory::Info,"Marker","3");
         m_emu.core.LoadGameData();
-        while(core_is_running()){
+        Logger::Log(LogCategory::Info,"Marker","4");
+        while(core_is_running())
+        {
+            for(std::vector<RETRO::Sprite::Command>::iterator i = cmd.begin(); i != cmd.end(); i++)
+            {
+                Logger::Log(LogCategory::Info,std::string("Command ") + std::to_string((*i).id),(*i).name);
+                if((*i).id < spr.size())
+                    spr[(*i).id]->RunCommand(&(*i));
+                else
+                {
+                    if((*i).name == "FromImage")
+                    {
+                        Logger::Log(LogCategory::Info,"Command",(*i).name);
+                        CreateSprite((*i).param[0], (*i).iparam[0], (*i).iparam[1], (*i).iparam[2], (*i).iparam[3]);
+                    }
+                    else if((*i).name == "FromSprite")
+                    {
+                        Logger::Log(LogCategory::Debug,"Command",(*i).name);
+                        CreateSprite((*i).iparam[0]);
+                    }
+                    else
+                    {
+                        Logger::Log(LogCategory::Info,"Command",std::string("Unidentified Command ")+(*i).name);
+                    }
+                    
+                }
+                
+            }
+            cmd.clear();
+
+        Logger::Log(LogCategory::Debug, "Joe's debug", "Dang it A");
             m_emu.core.Run();
+        Logger::Log(LogCategory::Debug, "Joe's debug", "Dang it B");
             core_refresh();
-            //Was for testing savestates
-/*            const Uint8 *keys = SDL_GetKeyboardState(NULL);
-            if(keys[SDL_SCANCODE_LALT] && keys[SDL_SCANCODE_1])
-                m_emu.core.LoadState(0);
-            else if(keys[SDL_SCANCODE_LALT] && keys[SDL_SCANCODE_2])
-                m_emu.core.LoadState(1);
-            else if(keys[SDL_SCANCODE_1])
-                m_emu.core.SaveState(0);
-            else if(keys[SDL_SCANCODE_2])
-                m_emu.core.SaveState(1);*/
         }
         m_emu.core.SaveGameData();
         ImGuiSDL::Deinitialize();
+        video_deinit();
         CoreStoppedHandler();
     }catch(const std::exception& e)
     {
@@ -620,15 +669,12 @@ void App::BindingAfterCreateResources()
 
 void App::BindingBeforeRender()
 {
-    //m_video.gl_context.MakeCurrent(m_video.window);
+    //SDL_UpdateTexture(texture_get_screen(),NULL,screen_data(),screen_pitch());
+    if(!texture_get_screen() || !renderer_get())
+        return;
 
-    //if (m_emu.core.GetEmuState() == M64EMU_PAUSED) {
-    //    glScissor(0, 0, m_video.window.GetWidth(), m_video.window.GetHeight());
-    //    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-    //    glClear(GL_COLOR_BUFFER_BIT);
-    //}
-
-    if (m_fonts.rebuild_atlas) {
+    if (m_fonts.rebuild_atlas)
+    {
         m_video.imgui.RebuildFontAtlas();
         m_fonts.rebuild_atlas = false;
     }
@@ -640,8 +686,48 @@ void App::BindingBeforeRender()
         resized = false;
     }
 
+    //if(spr.size() >= 2)
+      //  std::sort(spr.begin(),spr.end(),&HigherSprite);
 
-    core_render();
+    SDL_Rect a = {0,0,screen_w(),screen_h()};
+    if(a.w>1&&a.h>1)
+        while(a.w*2 < Frontend::App::GetInstance().GetMainWindow().GetWidth() && a.h*2 < Frontend::App::GetInstance().GetMainWindow().GetHeight())
+        {
+            a.w*=2;
+            a.h*=2;
+        };
+    a.x += Frontend::App::GetInstance().GetMainWindow().GetWidth()/2;
+    a.x -= a.w/2;
+    a.y += Frontend::App::GetInstance().GetMainWindow().GetHeight()/2;
+    a.y -= a.h/2;
+
+    SDL_SetRenderTarget(renderer_get(),NULL);
+    SDL_SetRenderDrawColor(renderer_get(),64,64,64,255);
+    SDL_RenderFillRect(renderer_get(),NULL);
+
+    if(SDL_SetRenderTarget(renderer_get(),texture_get())!=0)
+        Logger::Log(LogCategory::Info,"ARGH",std::string("WHY!?!? ") + SDL_GetError());
+    /*  This is not possible until the day you can set Color Keys to streamed textures, alternating to plan B,
+    Sadly it will only work for some games D; Luckily, games at/after SNES era, can probably make their own puppets
+    games in the NES era, will look alrightish, with these sprites slapped on
+    for(std::vector<RETRO::Sprite*>::iterator i=spr.begin();i!=spr.end();i++)
+        if(!(*i)->GetFG())
+        {
+            Logger::Log(LogCategory::Info,"Drawing Sprite BG","Sprite");
+            (*i)->Draw();
+        }*/
+    SDL_RenderCopy(renderer_get(),texture_get_screen(),NULL,NULL);
+    int xy=0;
+    for(std::vector<RETRO::Sprite*>::iterator i=spr.begin();i!=spr.end();i++)
+        if((*i)->GetFG())
+        {
+            xy++;
+            Logger::Log(LogCategory::Info,"Drawing Sprite FG",std::string("Sprite ") + std::to_string(xy));
+            (*i)->Draw();
+        }
+    
+    SDL_SetRenderTarget(renderer_get(),NULL);
+    core_render(a);
 
     m_video.imgui.NewFrame(m_video.window);
 
@@ -660,6 +746,8 @@ void App::BindingBeforeRender()
 
 void App::BindingAfterRender()
 {
+    if(!texture_get_screen() || !renderer_get())
+        return;
     m_any_item_active = ImGui::IsAnyItemActive();
     ImGui::End();
 
@@ -673,7 +761,8 @@ void App::BindingAfterRender()
     //m_video.window.Swap();
     //SDL::GLContext::MakeCurrentNone();
     ++m_emu.elapsed_frames;
-
+    
+    SDL_SetRenderTarget(renderer_get(),NULL);
     core_present();
 }
 
@@ -848,6 +937,74 @@ void App::TakeScreenshot()
 InputConf::InputMap *App::GetInputMap(int n)
 {
     return map[n];
+}
+
+int App::CreateSprite(std::string fname,int w,int h,int cols,int rows)
+{
+    Logger::Log(LogCategory::Info,"The callback 1","Start!");
+    int index = spr.size();
+    spr.push_back(new RETRO::Sprite(renderer_get()));
+    if(!spr[index]->LoadFromImage(fname,w,h,cols,rows))
+    {
+        Logger::Log(LogCategory::Error,"Failed to load sprite","Boo!");
+        spr.pop_back();
+        return -1;
+    }
+    Logger::Log(LogCategory::Info,"Loaded Sprite","Yay!");
+    return index;
+}
+int App::CreateSprite(SDL_Surface *srf,int w,int h,int cols,int rows)
+{
+    Logger::Log(LogCategory::Info,"The callback 2","Start!");
+    int index = spr.size();
+    spr.push_back(new RETRO::Sprite(renderer_get()));
+    if(!spr[index]->LoadFromSurface(srf,w,h,cols,rows))
+    {
+        spr.pop_back();
+        return -1;
+    }
+    return index;
+}
+int App::CreateSprite(void *pixels,int pitch,int w,int h,int cols,int rows)
+{
+    Logger::Log(LogCategory::Info,"The callback 3","Start!");
+    int index = spr.size();
+    spr.push_back(new RETRO::Sprite(renderer_get()));
+    if(!spr[index]->LoadFromBuffer(pixels,pitch,w,h,cols,rows))
+    {
+        spr.pop_back();
+        return -1;
+    }
+    return index;
+}
+int App::CreateSprite(int index)
+{
+    int nindex = spr.size();
+    spr.push_back(new RETRO::Sprite());
+    spr[nindex]->Copy(spr[index]);
+    Logger::Log(LogCategory::Debug,"Copying Sprite " + std::to_string(index),"To sprite " + std::to_string(nindex));
+    return nindex;
+}
+RETRO::Sprite *App::GetSprite(int index)
+{
+    if(index >= 0 && index < spr.size())
+        return spr[index];
+    return NULL;
+}
+void App::RemoveSprite(int index)
+{
+    if(index >= 0 && index < spr.size())
+    {
+        delete spr[index];
+        spr[index] = nullptr;
+        for(int n=index;n<spr.size()-2;n++)
+            spr[n] = spr[n+1];
+        spr.pop_back();
+    }
+}
+void App::PushBackCommand(std::string name,int id,std::vector<std::string> values,std::vector<int> ivalues)
+{
+    cmd.push_back({name,values,ivalues,id});
 }
 
 }
