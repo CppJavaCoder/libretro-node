@@ -40,7 +40,7 @@ public:
 	bool Unserialize(const void *data, size_t size);
 	void CheatReset(void);
 	void CheatSet(unsigned index, bool enabled, const char *code);
-	bool LoadGame(const struct retro_game_info *game,std::vector<u8> newData);
+	bool LoadGame(const std::string &s);
 	bool LoadGameSpecial(unsigned game_type, const struct retro_game_info *info, size_t num_info);
 	void UnloadGame();
 	unsigned GetRegion(void);
@@ -177,10 +177,13 @@ public:
     std::filesystem::path GetUserDataPath();
     std::filesystem::path GetUserCachePath();
 
+    bool GameLoaded();
+    void ReLoadGame();
+
 private:
     struct retro_game_info ginf;
     bool support_no_game;
-    bool pause;
+    bool pause, gameLoaded;
     std::vector<u8> gameData;
     //std::size_t gameSize;
 

@@ -186,6 +186,13 @@ void App::InitEmu(const StartInfo& info)
 
     // Configure the player input devices.
     m_emu.core.SetControllerPortDevice(0, RETRO_DEVICE_JOYPAD);
+    m_emu.core.SetControllerPortDevice(1, RETRO_DEVICE_JOYPAD);
+    m_emu.core.SetControllerPortDevice(2, 0xFF);
+    m_emu.core.SetControllerPortDevice(3, 0xFF);
+    m_emu.core.SetControllerPortDevice(4, 0xFF);
+    m_emu.core.SetControllerPortDevice(5, 0xFF);
+    m_emu.core.SetControllerPortDevice(6, 0xFF);
+    m_emu.core.SetControllerPortDevice(7, 0xFF);
 
 	//struct retro_system_info system = {0};
 	//m_emu.core.GetSystemInfo(&system);
@@ -412,8 +419,8 @@ void App::Execute()
         Logger::Log(LogCategory::Info,"Marker","0");
         ImGuiSDL::Initialize(renderer_get(),inf.window_width,inf.window_height);
 
-        Logger::Log(LogCategory::Info,"Marker","1");
-                
+        Logger::Log(LogCategory::Info,"Marker","1");      
+        //while(!m_emu.core.GameLoaded());
         Logger::Log(LogCategory::Info,"Marker","3");
         m_emu.core.LoadGameData();
         Logger::Log(LogCategory::Info,"Marker","4");

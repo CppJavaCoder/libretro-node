@@ -32,7 +32,10 @@ struct keymap {
 	unsigned rk;
 };
 
-static unsigned g_joy[4][(RETRO_DEVICE_ID_JOYPAD_R3+1)] = { 0 };
+static unsigned g_joy[4][(RETRO_DEVICE_ID_JOYPAD_R3+1)] = {{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+                                                           { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+                                                           { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+                                                           { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }};
 
 static void die(const char *fmt, ...) {
 	char buffer[4096];
@@ -49,7 +52,8 @@ static void die(const char *fmt, ...) {
 
 static void video_init(void)
 {
-    g_rnd = SDL_CreateRenderer(Frontend::App::GetInstance().GetMainWindow().Get(),0,SDL_RENDERER_ACCELERATED|SDL_RENDERER_PRESENTVSYNC|SDL_RENDERER_TARGETTEXTURE);
+    if(!g_rnd)
+        g_rnd = SDL_CreateRenderer(Frontend::App::GetInstance().GetMainWindow().Get(),0,SDL_RENDERER_ACCELERATED|SDL_RENDERER_PRESENTVSYNC|SDL_RENDERER_TARGETTEXTURE);
 }
 
 static SDL_Renderer *renderer_get(void)
@@ -134,7 +138,6 @@ static inline void Reformat(const void *od,void **nd,unsigned width,unsigned hei
         SDL_FreeFormat(wFormat);
     wFormat = NULL;
 } 
-static int increment = 0;
 static void video_refresh(const void *data, unsigned width, unsigned height, unsigned pitch) {
     if (data && data != RETRO_HW_FRAME_BUFFER_VALID) {
         
@@ -156,13 +159,7 @@ static void video_refresh(const void *data, unsigned width, unsigned height, uns
 
         Reformat(data,&g_srf->pixels,width,height,pitch);
         const Uint8 *keys = SDL_GetKeyboardState(NULL);
-        if(keys[SDL_SCANCODE_A])
-            increment++;
-        if(keys[SDL_SCANCODE_B])
-            increment--;
-        if(keys[SDL_SCANCODE_C])
-            Logger::Log(LogCategory::Debug,"Found it",std::to_string((width*4)+increment));
-        SDL_UpdateTexture(g_screen,NULL,g_srf->pixels,(width*4)+increment);
+        SDL_UpdateTexture(g_screen,NULL,g_srf->pixels,(width*4));
         Frontend::App::GetInstance().SwapHandler();
         Frontend::App::GetInstance().NewFrameHandler();
 	}
@@ -238,7 +235,6 @@ static void core_log(enum retro_log_level level, const char *fmt, ...) {
 }
 
 static bool core_environment(unsigned cmd, void *data) {
-    Logger::Log(LogCategory::Debug, "Joe's debug", "I'm going in");
 	switch (cmd) {
     case RETRO_ENVIRONMENT_SET_SUBSYSTEM_INFO: {
         const struct retro_subsystem_info *inf = (const struct retro_subsystem_info *)data;
@@ -339,7 +335,7 @@ static bool core_environment(unsigned cmd, void *data) {
         //hw->get_current_framebuffer = core_get_current_framebuffer;
         //hw->get_proc_address = (retro_hw_get_proc_address_t)SDL_GL_GetProcAddress;
         //g_video.hw = *hw;
-        return true;
+        return false;
     }
     case RETRO_ENVIRONMENT_SET_FRAME_TIME_CALLBACK: {
         const struct retro_frame_time_callback *frame_time =
@@ -386,17 +382,16 @@ static bool core_environment(unsigned cmd, void *data) {
 
 
 static void core_video_refresh(const void *data, unsigned width, unsigned height, size_t pitch) {
-    Logger::Log(LogCategory::Debug,"VR","Video Refresh");
     video_refresh(data, width, height, pitch);
 }
 
 
 static void core_input_poll(void) {
-    Logger::Log(LogCategory::Debug, "Joe's debug", "I'm going into input");
     const Uint8 *keys = SDL_GetKeyboardState(NULL);
     if(keys[SDL_SCANCODE_ESCAPE])
         running = false;
 
+    Frontend::App::GetInstance().GetInput().Update(Frontend::App::GetInstance().GetCore());
     for(int n = 0; n < 4; n++)
     {
         std::vector<u8> input = Frontend::App::GetInstance().GetInputMap(n)->Update();
@@ -421,9 +416,7 @@ static void core_input_poll(void) {
         //    Frontend::App::GetInstance().GetInput().SetButton(0,RETRO_DEVICE_ID_JOYPAD_A,(bool)input[InputConf::MapUtil::MapIndex_A]);
         }
 
-        Frontend::App::GetInstance().GetInput().Update(Frontend::App::GetInstance().GetCore());
-
-        for (int i = 0; i < RETRO_DEVICE_ID_JOYPAD_R3-1; i++)
+        for (int i = 0; i < RETRO_DEVICE_ID_JOYPAD_R3; i++)
         {
             //if(i == RETRO_DEVICE_ID_JOYPAD_RIGHT
             //|| i == RETRO_DEVICE_ID_JOYPAD_LEFT
@@ -434,25 +427,20 @@ static void core_input_poll(void) {
               //  g_joy[n][i] = Frontend::App::GetInstance().GetInput().GetButtonDown(n,i);
         }
     }
-    Logger::Log(LogCategory::Debug, "Joe's debug", "I'm going out of input");
 }
 
 static int16_t core_input_state(unsigned port, unsigned device, unsigned index, unsigned id) {
-	if (device != RETRO_DEVICE_JOYPAD || port > 3)
+	if (device != RETRO_DEVICE_JOYPAD || port > 3 || index != 0)
 		return 0;
-    Logger::Log(LogCategory::Debug, "Joe's debug", "Nab the input state");
 	return g_joy[port][id];
 }
 
 static void core_audio_sample(int16_t left, int16_t right) {
-    Logger::Log(LogCategory::Debug, "Joe's debug", "Audio Sample?");
 	int16_t buf[2] = {left, right};
 	audio_write(buf, 1);
-    Logger::Log(LogCategory::Debug, "Joe's debug", "Nope");
 }
 
 static size_t core_audio_sample_batch(const int16_t *data, size_t frames) {
-    Logger::Log(LogCategory::Debug, "Joe's debug", "Audio Sample Batch?");
 	return audio_write(data, frames);
 }
 
@@ -462,13 +450,11 @@ retro_time_t cpu_features_get_time_usec(void) {
 
 static void core_render(const SDL_Rect &a)
 {
-    Logger::Log(LogCategory::Debug, "Joe's debug", "Core Render?");
     if(g_rnd != NULL)
     {
         if(g_txt != NULL)
             SDL_RenderCopy(g_rnd,g_txt,NULL,&a);
     }
-    Logger::Log(LogCategory::Debug, "Joe's debug", "Nope");
 }
 static void core_present(void)
 {
@@ -477,7 +463,6 @@ static void core_present(void)
 
 static void core_refresh(void)
 {
-    Logger::Log(LogCategory::Debug, "Joe's debug", "Refresh?");
     // Update the game loop timer.
     if (runloop_frame_time.callback) {
         retro_time_t current = cpu_features_get_time_usec();
@@ -492,7 +477,6 @@ static void core_refresh(void)
     if (audio_callback.callback) {
         audio_callback.callback();
     }
-    Logger::Log(LogCategory::Debug, "Joe's debug", "Refreshed");
 }
 
 static bool core_is_running(void)

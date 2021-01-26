@@ -49,6 +49,7 @@ Core::Core() {
     ginf.path = "";
     ginf.meta = "";
     ginf.size = 0;
+    gameLoaded = false;
 }
 
 Core::~Core()
@@ -60,7 +61,14 @@ Core::~Core()
             *i = nullptr;
         }
 };
-
+void Core::ReLoadGame()
+{
+    LoadGame(ginf.path);
+}
+bool Core::GameLoaded()
+{
+    return gameLoaded;
+}
 void Core::LoadCore(const char *file)
 {
     memset(&m_retro, 0, sizeof(m_retro));
@@ -185,19 +193,42 @@ void Core::CheatSet(unsigned index, bool enabled, const char *code)
     Logger::Log(LogCategory::Debug,std::string("Cheat Code ")+std::to_string(index)+" "+code,std::string("Is ") + (enabled ? "Enabled" : "Disabled"));
     m_retro.retro_cheat_set(index,enabled,code);
 }
-bool Core::LoadGame(const struct retro_game_info *game,std::vector<u8> newData)
+bool Core::LoadGame(const std::string &s)
 {
-    gameData.clear();
-    gameData = newData;
-    //for(u32 n=0; n < game->size; n++)
-    //    gameData.push_back(((u8*)game->data)[n]);
+    //Todo, Move most of this into Core
+    errno = 0;
+    std::ifstream mfile;
+    mfile.exceptions(0);
+    mfile.open(s,std::ios::in|std::ios::binary);
+    if(!mfile.is_open() || !mfile.good())
+    {
+        Logger::Log(LogCategory::Fatal,"Retro",std::string("Failed loading file ") + std::strerror(errno));
+        return false;
+    }
+
+    ginf.data = NULL;
+    ginf.path = s.c_str();
+    ginf.meta = "";
+    ginf.size = 0;
+
+    mfile.seekg(std::ios::beg,0);
+
+    std::vector<char> bytes(std::istreambuf_iterator<char>(mfile),(std::istreambuf_iterator<char>()));
+    mfile.close();
+
+    gameData.assign(std::begin(bytes),std::end(bytes));
     ginf.data = gameData.data();
     ginf.size = gameData.size();
-    ginf.path = game->path;
-    ginf.meta = game->meta;
-    for(int n=0;n<20;n++)
-        Logger::Log(LogCategory::Debug,"Peeking at data",std::to_string(((u8*)ginf.data)[n])+ " " + std::to_string(((u8*)game->data)[n]));
-    return m_retro.retro_load_game(&ginf);
+    if(!ginf.data)
+    {
+        Logger::Log(LogCategory::Fatal,"Retro",std::string("Failed allocating memory!"));
+        return false;
+    }
+
+    //for(u32 n=0; n < game->size; n++)
+    //    gameData.push_back(((u8*)game->data)[n]);
+    gameLoaded = m_retro.retro_load_game(&ginf);
+    return gameLoaded;
 }
 bool Core::LoadGameSpecial(unsigned game_type, const struct retro_game_info *info, size_t num_info)
 {
@@ -355,7 +386,7 @@ bool Core::LoadGameData()
     mfile.read((char*)dat,size);
 
     Logger::Log(LogCategory::Debug,"Inner Marker","5");
-    RDRAMWriteBuffer(0x0,(u8*)dat,m_retro.retro_get_memory_size(RETRO_MEMORY_SAVE_RAM),RETRO_MEMORY_SAVE_RAM);
+    RDRAMWriteBuffer(0x0,(u8*)dat,size,RETRO_MEMORY_SAVE_RAM);
     
     Logger::Log(LogCategory::Debug,"Inner Marker","6");
     if(dat)
