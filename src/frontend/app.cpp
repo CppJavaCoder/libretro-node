@@ -96,8 +96,6 @@ void App::InitVideo(const StartInfo& info)
     m_video.window = {info.window_title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, info.window_width, info.window_height,
         SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN};
 
-    video_init();
-
     m_video.imgui.Initialize(m_video.window);
 
     auto font_atlas = ImGui::GetIO().Fonts;
@@ -237,7 +235,7 @@ void App::DoEvents()
                     core_stop();
                 }
                 if (e.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
-				    resized = true;
+				    g_resized = resized = true;
 				}
             }
 //          Is for Mupen
@@ -416,6 +414,7 @@ void App::Execute()
 {
     m_emu.execute = std::async(std::launch::async,[this]() {
     try{
+        video_init();
         Logger::Log(LogCategory::Info,"Marker","0");
         ImGuiSDL::Initialize(renderer_get(),inf.window_width,inf.window_height);
 
@@ -424,6 +423,7 @@ void App::Execute()
         Logger::Log(LogCategory::Info,"Marker","3");
         m_emu.core.LoadGameData();
         Logger::Log(LogCategory::Info,"Marker","4");
+        m_emu.notify_started = true;
         while(core_is_running())
         {
             for(std::vector<RETRO::Sprite::Command>::iterator i = cmd.begin(); i != cmd.end(); i++)
@@ -453,11 +453,10 @@ void App::Execute()
             }
             cmd.clear();
 
-        Logger::Log(LogCategory::Debug, "Joe's debug", "Dang it A");
             m_emu.core.Run();
-        Logger::Log(LogCategory::Debug, "Joe's debug", "Dang it B");
             core_refresh();
         }
+        m_emu.stopping = true;
         m_emu.core.SaveGameData();
         ImGuiSDL::Deinitialize();
         video_deinit();
@@ -713,7 +712,10 @@ void App::BindingBeforeRender()
     SDL_RenderFillRect(renderer_get(),NULL);
 
     if(SDL_SetRenderTarget(renderer_get(),texture_get())!=0)
+    {
+        g_resized = true;
         Logger::Log(LogCategory::Info,"ARGH",std::string("WHY!?!? ") + SDL_GetError());
+    }
     /*  This is not possible until the day you can set Color Keys to streamed textures, alternating to plan B,
     Sadly it will only work for some games D; Luckily, games at/after SNES era, can probably make their own puppets
     games in the NES era, will look alrightish, with these sprites slapped on

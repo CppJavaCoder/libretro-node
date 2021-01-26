@@ -6,6 +6,8 @@
 #include "common/logger.h"
 #include "sdl/window.h"
 
+#include "frontend/imgui_sdl.h"
+
 static SDL_Renderer *g_rnd = NULL;
 static SDL_Texture *g_txt = NULL;
 static SDL_Surface *g_srf = NULL;
@@ -21,7 +23,7 @@ static Uint8 g_format = 0;
 static float g_scale = 3;
 static bool running = true;
 
-static bool resized = false;
+static bool g_resized = false;
 
 static struct retro_variable *g_vars = NULL;
 
@@ -141,8 +143,19 @@ static inline void Reformat(const void *od,void **nd,unsigned width,unsigned hei
 static void video_refresh(const void *data, unsigned width, unsigned height, unsigned pitch) {
     if (data && data != RETRO_HW_FRAME_BUFFER_VALID) {
         
-        if(!g_srf || g_srf->w != width || g_srf->h != height)
+        if(!g_srf || g_srf->w != width || g_srf->h != height || g_resized)
         {
+            Logger::Log(LogCategory::Info,"Resizing","Okay?");
+            g_resized = false;
+            if(g_rnd!=NULL)
+            {
+                SDL_DestroyRenderer(g_rnd);
+            }
+            g_rnd = SDL_CreateRenderer(Frontend::App::GetInstance().GetMainWindow().Get(),0,SDL_RENDERER_ACCELERATED|SDL_RENDERER_PRESENTVSYNC|SDL_RENDERER_TARGETTEXTURE);
+
+            ImGuiSDL::Deinitialize();
+            ImGuiSDL::Initialize(renderer_get(),Frontend::App::GetInstance().GetMainWindow().GetWidth(),Frontend::App::GetInstance().GetMainWindow().GetHeight());
+
             if(g_srf != NULL)
                 SDL_FreeSurface(g_srf);
             g_srf = SDL_CreateRGBSurfaceWithFormat(SDL_SWSURFACE,width,height,32,SDL_GetWindowPixelFormat(Frontend::App::GetInstance().GetMainWindow().Get()));
@@ -155,13 +168,12 @@ static void video_refresh(const void *data, unsigned width, unsigned height, uns
             g_screen = SDL_CreateTexture(g_rnd,SDL_GetWindowPixelFormat(Frontend::App::GetInstance().GetMainWindow().Get()),SDL_TEXTUREACCESS_STREAMING,width,height);
             SDL_SetTextureBlendMode(g_txt,SDL_BLENDMODE_BLEND);
             SDL_SetTextureBlendMode(g_screen,SDL_BLENDMODE_BLEND);
+        }else{
+            Reformat(data,&g_srf->pixels,width,height,pitch);
+            SDL_UpdateTexture(g_screen,NULL,g_srf->pixels,(width*4));
+            Frontend::App::GetInstance().SwapHandler();
+            Frontend::App::GetInstance().NewFrameHandler();
         }
-
-        Reformat(data,&g_srf->pixels,width,height,pitch);
-        const Uint8 *keys = SDL_GetKeyboardState(NULL);
-        SDL_UpdateTexture(g_screen,NULL,g_srf->pixels,(width*4));
-        Frontend::App::GetInstance().SwapHandler();
-        Frontend::App::GetInstance().NewFrameHandler();
 	}
 }
 
