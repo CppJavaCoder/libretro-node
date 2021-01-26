@@ -169,8 +169,13 @@ static void video_refresh(const void *data, unsigned width, unsigned height, uns
             SDL_SetTextureBlendMode(g_txt,SDL_BLENDMODE_BLEND);
             SDL_SetTextureBlendMode(g_screen,SDL_BLENDMODE_BLEND);
         }else{
-            Reformat(data,&g_srf->pixels,width,height,pitch);
-            SDL_UpdateTexture(g_screen,NULL,g_srf->pixels,(width*4));
+            if(g_format == SDL_PIXELFORMAT_RGB565)
+            {
+                Reformat(data,&g_srf->pixels,width,height,pitch);
+                SDL_UpdateTexture(g_screen,NULL,g_srf->pixels,(width*4));
+            }else{
+                SDL_UpdateTexture(g_screen,NULL,data,pitch);
+            }
             Frontend::App::GetInstance().SwapHandler();
             Frontend::App::GetInstance().NewFrameHandler();
         }
