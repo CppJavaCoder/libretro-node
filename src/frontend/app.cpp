@@ -731,13 +731,17 @@ void App::BindingBeforeRender()
         }*/
     SDL_RenderCopy(renderer_get(),texture_get_screen(),NULL,NULL);
     int xy=0;
+    bool queueReload = false;
     for(std::vector<RETRO::Sprite*>::iterator i=spr.begin();i!=spr.end();i++)
         if((*i)->GetFG())
         {
             xy++;
             Logger::Log(LogCategory::Info,"Drawing Sprite FG",std::string("Sprite ") + std::to_string(xy));
-            (*i)->Draw();
+            if(!(*i)->Draw())
+                queueReload = true;
         }
+    if(queueReload)
+        ReloadSprites();
     
     SDL_SetRenderTarget(renderer_get(),NULL);
     core_render(a);
@@ -1004,6 +1008,12 @@ RETRO::Sprite *App::GetSprite(int index)
         return spr[index];
     return NULL;
 }
+void App::ReloadSprites()
+{
+    for(std::vector<RETRO::Sprite*>::iterator i = spr.begin(); i != spr.end(); i++)
+        (*i)->Reload(renderer_get());
+}
+
 void App::RemoveSprite(int index)
 {
     if(index >= 0 && index < spr.size())

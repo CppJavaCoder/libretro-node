@@ -1,7 +1,7 @@
-#include "frontend/app.h"
-#include "frontend/vidext.h"
+//#include "frontend/app.h"
+//#include "frontend/vidext.h"
 
-#include <SDL2/SDL.h>
+//#include <SDL2/SDL.h>
 
 namespace Frontend {
 /*

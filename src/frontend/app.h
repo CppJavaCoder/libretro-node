@@ -121,6 +121,8 @@ public:
 
     int GetSpriteNum();
 
+    void ReloadSprites();
+
     RETRO::Sprite *GetSprite(int index);
     void RemoveSprite(int index);
 

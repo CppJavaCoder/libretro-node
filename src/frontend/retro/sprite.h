@@ -28,11 +28,13 @@ namespace RETRO
             int GetY();
             int GetW();
             int GetH();
-            void Draw();
+            bool Draw();
             void SetHFlip(bool flip);
             void SetVFlip(bool flip);
             void SetFG(bool fg);
             bool GetFG();
+
+            void Reload(SDL_Renderer *r);
 
             struct Command
             {
@@ -57,6 +59,7 @@ namespace RETRO
             bool isFG;
             Sprite *par;
             int xoff,yoff;
+            std::string fname;
     };
 
 }

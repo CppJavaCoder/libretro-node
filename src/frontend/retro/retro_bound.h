@@ -1,8 +1,9 @@
-#ifndef RETRO_BOUND_H
-#define RETRO_BOUND_H
+#pragma once
 
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
 #include <libretro.h>
+#include "common/types.h"
 #include "frontend/app.h"
 
 static void video_init(void);
@@ -30,5 +31,3 @@ static void core_render(const SDL_Rect &a);
 static void core_present(void);
 static void core_refresh(void);
 static bool core_is_running(void);
-
-#endif

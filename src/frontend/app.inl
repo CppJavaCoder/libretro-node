@@ -1,4 +1,5 @@
 #include "frontend/app.h"
+#include "retro/retro_bound.h"
 
 namespace Frontend {
 

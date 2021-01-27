@@ -1,12 +1,11 @@
 #include "retro_bound.h"
 
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_image.h>
-
 #include "common/logger.h"
 #include "sdl/window.h"
 
 #include "frontend/imgui_sdl.h"
+
+#include <thread>
 
 static SDL_Renderer *g_rnd = NULL;
 static SDL_Texture *g_txt = NULL;
@@ -202,6 +201,7 @@ static void video_refresh(const void *data, unsigned width, unsigned height, uns
             {
                 Logger::Log(LogCategory::Error,"Retro","Failed to create new Emulator Screen!");
             }
+            Frontend::App::GetInstance().ReloadSprites();
             SDL_SetTextureBlendMode(g_txt,SDL_BLENDMODE_BLEND);
             SDL_SetTextureBlendMode(g_screen,SDL_BLENDMODE_BLEND);
             Frontend::App::GetInstance().NewVIHandler();
@@ -532,8 +532,8 @@ static void core_refresh(void)
 {
     // Update the game loop timer.
     _frame = SDL_GetTicks()-_time;
-    if(_frame < 1000/59)
-        SDL_Delay((1000/59) - _frame);
+    if(_frame < (1000/60))
+        std::this_thread::sleep_for(std::chrono::milliseconds((1000/60) - _frame));//SDL_Delay((1000/59) - _frame);
     if (runloop_frame_time.callback) {
         retro_time_t current = cpu_features_get_time_usec();
         retro_time_t delta = current - runloop_frame_time_last;

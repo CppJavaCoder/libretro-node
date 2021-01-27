@@ -1,6 +1,8 @@
 #include "sprite.h"
 #include "common/logger.h"
 
+//#include "frontend/app.h"
+
 namespace RETRO
 {
 
@@ -12,6 +14,7 @@ namespace RETRO
         isFG = true;
         vflip = hflip = false;
         par = NULL;
+        fname = "";
     }
     void Sprite::Copy(const Sprite *spr)
     {
@@ -54,6 +57,7 @@ namespace RETRO
     }
     bool Sprite::LoadFromImage(std::string img,int w,int h,int cols,int rows)
     {
+        fname = img;
         free_surf = false;
         if(free_surf && srf)
         {
@@ -79,6 +83,8 @@ namespace RETRO
         free_surf = false;
 
         SDL_SetColorKey(s,1,SDL_MapRGB(s->format,255,0,255));
+        if(txt != NULL)
+            SDL_DestroyTexture(txt);
         txt = SDL_CreateTextureFromSurface(rnd,s);
         if(txt == NULL)
             return false;
@@ -183,7 +189,7 @@ namespace RETRO
     {
         return pos.h;
     }
-    void Sprite::Draw()
+    bool Sprite::Draw()
     {
         SDL_RendererFlip flip = SDL_FLIP_NONE;
         int angle = 0;
@@ -205,8 +211,21 @@ namespace RETRO
         else if(rnd != NULL && txt != NULL)
         {
             SDL_RenderCopyEx(rnd,txt,&a,&b,angle,NULL,flip);
-            //SDL_SaveBMP(srf,"mods/character.bmp");
+            SDL_SaveBMP(srf,"mods/character.bmp");
         }
+        else
+        {
+            if(!rnd)
+                Logger::Log(LogCategory::Error,"Sprite","No Renderer!");
+            if(!txt)
+            {
+                Logger::Log(LogCategory::Error,"Sprite","No Texture!");
+            }
+            
+            Logger::Log(LogCategory::Error,"Sprite","ERROR!");
+                return false;
+        }
+        return true;
     }
     void Sprite::SetVFlip(bool flip)
     {
@@ -246,5 +265,20 @@ namespace RETRO
             SetClip(c->iparam[0],c->iparam[1],c->iparam[2],c->iparam[3]);
         else
             Logger::Log(LogCategory::Info,"Unidentified Command",c->name);
+    }
+    void Sprite::Reload(SDL_Renderer *r)
+    {
+        rnd = r;
+        if(fname != "")
+        {
+            LoadFromImage(fname,pos.w,pos.h,cols,rows);
+        }
+        else
+        {
+            bool olfs = free_surf;
+            free_surf = false;
+            LoadFromSurface(srf,pos.w,pos.h,cols,rows);
+            free_surf = olfs;
+        }
     }
 }
