@@ -50,6 +50,7 @@ Core::Core() {
     ginf.meta = "";
     ginf.size = 0;
     gameLoaded = false;
+    sys = RetroHeader::UNKNOWN;
 }
 
 Core::~Core()
@@ -194,6 +195,17 @@ void Core::CheatSet(unsigned index, bool enabled, const char *code)
 }
 bool Core::LoadGame(const std::string &s)
 {
+    sys = RetroHeader::UNKNOWN;
+
+    std::string clip = s.substr(s.find_last_of("."));
+
+    if(clip == ".nes")
+        sys = RetroHeader::NES;
+    else if(clip == ".bin")
+        sys = RetroHeader::GENESIS;
+    else if(clip == ".smc")
+        sys = RetroHeader::SNES;
+
     //Todo, Move most of this into Core
     errno = 0;
     std::ifstream mfile;
@@ -226,6 +238,7 @@ bool Core::LoadGame(const std::string &s)
 
     //for(u32 n=0; n < game->size; n++)
     //    gameData.push_back(((u8*)game->data)[n]);
+    Logger::Log(LogCategory::Info,"Retro",std::string("Loading the game ") + s);
     gameLoaded = m_retro.retro_load_game(&ginf);
     return gameLoaded;
 }
@@ -350,7 +363,8 @@ bool Core::SaveGameData()
 {
     if(save_dir == "")
         return false;
-    std::ofstream mfile(save_dir/"SaveGameData.dat",std::ios::out|std::ios::trunc|std::ios::binary);
+    std::string name = GetROMHeader();
+    std::ofstream mfile(save_dir/(name+"Data.dat"),std::ios::out|std::ios::trunc|std::ios::binary);
 
     if(!mfile.is_open())
         return false;
@@ -369,7 +383,8 @@ bool Core::LoadGameData()
     Logger::Log(LogCategory::Debug,"Inner Marker","1");
     std::ifstream mfile;
     mfile.exceptions(0);
-    mfile.open(save_dir/"SaveGameData.dat",std::ios::in|std::ios::binary);
+    std::string name = GetROMHeader();
+    mfile.open(save_dir/(name+"Data.dat"),std::ios::in|std::ios::trunc|std::ios::binary);
 
     Logger::Log(LogCategory::Debug,"Inner Marker","2");
     if(!mfile.is_open() || !mfile.good())
@@ -423,11 +438,11 @@ u8 Core::RDRAMRead8(u32 addr,int type)
 }
 u16 Core::RDRAMRead16(u32 addr,int type)
 {
-    return RDRAMRead8(addr+1,type) << 8 + RDRAMRead8(addr,type);
+    return ((u16)RDRAMRead8(addr,type) << 8) + (u16)RDRAMRead8(addr+1,type);
 }
 u32 Core::RDRAMRead32(u32 addr,int type)
 {
-    return RDRAMRead16(addr+2,type) << 16 + RDRAMRead16(addr,type);
+    return ((u32)RDRAMRead16(addr,type) << 16) + (u32)RDRAMRead16(addr+2,type);
 }
 u8* Core::RDRAMReadBuffer(u32 addr, std::size_t len,int type)
 {
@@ -463,11 +478,11 @@ u8 Core::ROMRead8(u32 addr)
 }
 u16 Core::ROMRead16(u32 addr)
 {
-    return ROMRead8(addr+1) << 8 + ROMRead8(addr);
+    return (((u16)ROMRead8(addr)) << 8) + (u16)ROMRead8(addr+1);
 }
 u32 Core::ROMRead32(u32 addr)
 {
-    return ROMRead16(addr+2) << 16 + ROMRead16(addr);
+    return (((u32)ROMRead16(addr)) << 16) + (u32)ROMRead16(addr+2);
 }
 u8* Core::ROMReadBuffer(u32 addr, std::size_t len)
 {
@@ -519,15 +534,31 @@ void Core::SetGame(void *data,std::size_t size)
     gameData = (u8*)data;
 }*/
 
-std::string Core::GetROMHeader(RetroHeader::System sys)
+std::string Core::GetROMHeader()
 {
+    std::stringstream stream("");
+    std::string tmp;
     switch(sys)
     {
         case RetroHeader::NES:
-
+            stream << std::hex << ROMRead32(0x00);
+            stream << std::hex << ROMRead32(0x03);
+            stream << std::hex << ROMRead32(0x07);
+            stream << std::hex << ROMRead32(0x0B);
+            
+            return stream.str();
         break;
         case RetroHeader::SNES:
-            
+            stream << std::hex << ROMRead16(0xFFB0);
+            stream << std::hex << ROMRead32(0xFFB2);
+
+            return stream.str();
+        break;
+        case RetroHeader::GENESIS:
+            for(u32 n=0x100;n<0x130;n++)
+                if(ROMRead8(n) != 20)
+                    tmp += (char)ROMRead8(n);
+            return tmp; 
         break;
         default:
         break;
@@ -539,10 +570,8 @@ void Core::GetRetroHeader(RetroHeader *hdr)
     //Identify the games system
     if(hdr == nullptr)
         return;
-    retro_system_info inf;
-    Core::GetSystemInfo(&inf);
-    
-    hdr->name = GetROMHeader(hdr->sys);
+    hdr->name = GetROMHeader();
+    hdr->sys = sys;
 }
 
 }

@@ -172,6 +172,10 @@ static void video_refresh(const void *data, unsigned width, unsigned height, uns
                 SDL_DestroyRenderer(g_rnd);
             }
             g_rnd = SDL_CreateRenderer(Frontend::App::GetInstance().GetMainWindow().Get(),0,SDL_RENDERER_ACCELERATED|SDL_RENDERER_TARGETTEXTURE);
+            if(!g_rnd)
+            {
+                Logger::Log(LogCategory::Error,"Retro","Failed to create Renderer!");
+            }
 
             ImGuiSDL::Deinitialize();
             ImGuiSDL::Initialize(renderer_get(),Frontend::App::GetInstance().GetMainWindow().GetWidth(),Frontend::App::GetInstance().GetMainWindow().GetHeight());
@@ -179,15 +183,28 @@ static void video_refresh(const void *data, unsigned width, unsigned height, uns
             if(g_srf != NULL)
                 SDL_FreeSurface(g_srf);
             g_srf = SDL_CreateRGBSurfaceWithFormat(SDL_SWSURFACE,width,height,32,SDL_GetWindowPixelFormat(Frontend::App::GetInstance().GetMainWindow().Get()));
+            if(!g_srf)
+            {
+                Logger::Log(LogCategory::Error,"Retro","Failed to create Surface!");
+            }
             if(g_txt != NULL)
                 SDL_DestroyTexture(g_txt);
             g_txt = SDL_CreateTexture(g_rnd,SDL_GetWindowPixelFormat(Frontend::App::GetInstance().GetMainWindow().Get()),SDL_TEXTUREACCESS_TARGET,width,height);
+            if(!g_txt)
+            {
+                Logger::Log(LogCategory::Error,"Retro","Failed to create new TargetTexture!");
+            }
         
             if(g_screen != NULL)
                 SDL_DestroyTexture(g_screen);
             g_screen = SDL_CreateTexture(g_rnd,SDL_GetWindowPixelFormat(Frontend::App::GetInstance().GetMainWindow().Get()),SDL_TEXTUREACCESS_STREAMING,width,height);
+            if(!g_txt)
+            {
+                Logger::Log(LogCategory::Error,"Retro","Failed to create new Emulator Screen!");
+            }
             SDL_SetTextureBlendMode(g_txt,SDL_BLENDMODE_BLEND);
             SDL_SetTextureBlendMode(g_screen,SDL_BLENDMODE_BLEND);
+            Frontend::App::GetInstance().NewVIHandler();
         }else{
             if(pitch > width*4 && g_format == 0)
             {
@@ -515,8 +532,8 @@ static void core_refresh(void)
 {
     // Update the game loop timer.
     _frame = SDL_GetTicks()-_time;
-    if(_frame < 1000/60)
-        SDL_Delay((1000/60) - _frame);
+    if(_frame < 1000/59)
+        SDL_Delay((1000/59) - _frame);
     if (runloop_frame_time.callback) {
         retro_time_t current = cpu_features_get_time_usec();
         retro_time_t delta = current - runloop_frame_time_last;

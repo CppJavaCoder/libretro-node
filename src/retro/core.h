@@ -102,13 +102,13 @@ public:
     struct RetroHeader{
         enum System
         {
-            NES, SNES, UNKOWN
+            NES, SNES, GENESIS, UNKNOWN
         };
         System sys;
         std::string name;
     };
 
-    std::string GetROMHeader(RetroHeader::System sys);
+    std::string GetROMHeader();
     void GetRetroHeader(RetroHeader *hdr);
 
     const std::filesystem::path GetSaveDir();
@@ -181,6 +181,7 @@ public:
     void ReLoadGame();
 
 private:
+    RetroHeader::System sys;
     struct retro_game_info ginf;
     bool support_no_game;
     bool pause, gameLoaded;

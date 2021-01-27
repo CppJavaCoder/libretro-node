@@ -50,6 +50,10 @@ App::App()
     
     for(int n = 0; n < 4; n++)
         map[n] = nullptr;
+
+    m_emu.elapsed_frames = 0;
+    m_emu.gfx_aspect = 0;
+    m_emu.stopping = m_emu.core_init = m_emu.debug_init = m_emu.started = m_emu.notify_started = false;
 }
 
 App::~App()
@@ -105,10 +109,6 @@ void App::InitVideo(const StartInfo& info)
 
     Frontend::App::GetInstance().NewVIHandler();
     Logger::Log(LogCategory::Debug, "VideoInit", "Exit");
-
-    m_emu.elapsed_frames = 0;
-    m_emu.gfx_aspect = 0;
-    m_emu.stopping = m_emu.core_init = m_emu.debug_init = m_emu.started = m_emu.notify_started = false;
 }
 
 void App::DeinitVideo()
@@ -309,7 +309,7 @@ void App::LoadROMCheats()
     //auto crc = !m_cheats.crc.empty() ? m_cheats.crc :
         //fmt::format("{:08X}-{:08X}-C:{:02X}", "CRC1", "CRC2", 0xff/*header.Country_code & 0xff*/);
 
-    std::string crc = "Zelda";
+    std::string crc = m_emu.core.GetROMHeader();
 
     if (auto it = m_cheats.map.find(crc); it != m_cheats.map.end()) {
         m_cheats.block = &it->second;
@@ -428,7 +428,7 @@ void App::Execute()
         m_emu.core.LoadGameData();
         Logger::Log(LogCategory::Info,"Marker","4");
         //m_emu.notify_started = true;
-        while(core_is_running())
+        while(core_is_running() && m_video.window.Get())
         {
             for(std::vector<RETRO::Sprite::Command>::iterator i = cmd.begin(); i != cmd.end(); i++)
             {
@@ -682,7 +682,7 @@ void App::BindingBeforeRender()
     //SDL_UpdateTexture(texture_get_screen(),NULL,screen_data(),screen_pitch());
     if(!texture_get_screen() || !renderer_get())
         return;
-
+    
     if (m_fonts.rebuild_atlas)
     {
         m_video.imgui.RebuildFontAtlas();
