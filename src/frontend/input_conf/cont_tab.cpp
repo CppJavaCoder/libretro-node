@@ -23,12 +23,12 @@ const std::array<const char*, 6> k_plugin_names {
 
 const std::array<const char*, MapIndex_Count> k_labels {
     "X Axis Left", "X Axis Right", "Y Axis Up", "Y Axis Down",
-    "DPad Left", "DPad Right", "DPad Up", "DPad Down",
-    "Start", "Z Trigger", "B Button", "A Button",
-    "C Button Left", "C Button Right", "C Button Up", "C Button Down",
-    "L Trigger", "R Trigger",
-    "C Button Left", "C Button Right", "C Button Up", "C Button Down",
-    "Memory Pak", "Rumble Pak"
+    "Left Trigger 1", "Right Trigger 1", "Left Trigger 2", "Right Trigger 2",
+    "Start", "Select", "Blank", "Blank",
+    "X Button", "B Button", "Y Button", "A Button",
+    "L Trigger 3", "R Trigger 3",
+    "Blank", "Blank", "Blank", "Blank",
+    "Blank", "Blank"
 };
 
 const std::array<std::pair<const char*, MapIndex>, 12> k_conf_props {

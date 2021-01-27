@@ -12,6 +12,7 @@ namespace InputConf {
 
 class EventsTab
 {
+friend class InputMap;
 public:
 	EventsTab();
 

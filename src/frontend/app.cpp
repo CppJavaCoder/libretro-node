@@ -105,6 +105,10 @@ void App::InitVideo(const StartInfo& info)
 
     Frontend::App::GetInstance().NewVIHandler();
     Logger::Log(LogCategory::Debug, "VideoInit", "Exit");
+
+    m_emu.elapsed_frames = 0;
+    m_emu.gfx_aspect = 0;
+    m_emu.stopping = m_emu.core_init = m_emu.debug_init = m_emu.started = m_emu.notify_started = false;
 }
 
 void App::DeinitVideo()
@@ -423,7 +427,7 @@ void App::Execute()
         Logger::Log(LogCategory::Info,"Marker","3");
         m_emu.core.LoadGameData();
         Logger::Log(LogCategory::Info,"Marker","4");
-        m_emu.notify_started = true;
+        //m_emu.notify_started = true;
         while(core_is_running())
         {
             for(std::vector<RETRO::Sprite::Command>::iterator i = cmd.begin(); i != cmd.end(); i++)

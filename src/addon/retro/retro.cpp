@@ -282,6 +282,13 @@ Napi::Value SaveStateToFile(const Napi::CallbackInfo& info)
         return info.Env().Undefined();
     });
 }
+Napi::Value SetSaveDir(const Napi::CallbackInfo& info)
+{
+    return SafeCall(info.Env(), [&info]() {
+        Frontend::App::GetInstance().GetCore().SetSaveDir(AsStrUtf8(info[0]));
+        return info.Env().Undefined();
+    });
+}
 
 Napi::Object BuildExports(Napi::Env env, Napi::Object exports)
 {
@@ -320,6 +327,7 @@ Napi::Object BuildExports(Napi::Env env, Napi::Object exports)
     exports.Set("advanceFrame", Napi::Function::New(env, AdvanceFrame));
 
     exports.Set("getGameInfo", Napi::Function::New(env, GetGameInfo));
+    exports.Set("setSaveDir", Napi::Function::New(env, SetSaveDir));
 
     return exports;
 }

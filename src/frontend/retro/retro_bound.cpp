@@ -55,7 +55,7 @@ static void die(const char *fmt, ...) {
 static void video_init(void)
 {
     if(!g_rnd)
-        g_rnd = SDL_CreateRenderer(Frontend::App::GetInstance().GetMainWindow().Get(),0,SDL_RENDERER_ACCELERATED|SDL_RENDERER_PRESENTVSYNC|SDL_RENDERER_TARGETTEXTURE);
+        g_rnd = SDL_CreateRenderer(Frontend::App::GetInstance().GetMainWindow().Get(),0,SDL_RENDERER_ACCELERATED|SDL_RENDERER_TARGETTEXTURE);
 }
 
 static SDL_Renderer *renderer_get(void)
@@ -109,12 +109,15 @@ static bool video_set_pixel_format(unsigned format) {
 	    //WARNING, untested
         case RETRO_PIXEL_FORMAT_0RGB1555:
             g_format = SDL_PIXELFORMAT_RGB555;
+            Logger::Log(LogCategory::Info,"Format","RGB555");
             break;
         case RETRO_PIXEL_FORMAT_XRGB8888:
             g_format = SDL_PIXELFORMAT_RGBX8888;
+            Logger::Log(LogCategory::Info,"Format","XRGB8888");
             break;
         case RETRO_PIXEL_FORMAT_RGB565:
             g_format = SDL_PIXELFORMAT_RGB565;
+            Logger::Log(LogCategory::Info,"Format","RGB565");
             break;
         default:
             die("Unknown pixel type %u", format);
@@ -123,7 +126,7 @@ static bool video_set_pixel_format(unsigned format) {
 	return true;
 }
 
-static inline void Reformat(const void *od,void **nd,unsigned width,unsigned height,unsigned opitch)
+static inline void ReformatRGB565t8888(const void *od,void **nd,unsigned width,unsigned height,unsigned opitch)
 {
     u8 r,g,b;
     u16 val;
@@ -133,6 +136,23 @@ static inline void Reformat(const void *od,void **nd,unsigned width,unsigned hei
         val = ((u16*)od)[n+(n/width)*(width+(opitch-(width*4))/2)];
         r = ((((val >> 11) & 0x1F) * 527) + 23) >> 6;
         g = ((((val >> 5)&0x3F) * 259) + 33) >> 6;//64
+        b = (((val & 0x1F) * 527) + 23) >> 6;//32
+        ((u32*)*nd)[n] = SDL_MapRGB(wFormat,r,g,b);
+    }
+    if(wFormat)
+        SDL_FreeFormat(wFormat);
+    wFormat = NULL;
+} 
+static inline void ReformatRGB555t8888(const void *od,void **nd,unsigned width,unsigned height,unsigned opitch)
+{
+    u8 r,g,b;
+    u16 val;
+    SDL_PixelFormat *wFormat = SDL_AllocFormat(SDL_GetWindowPixelFormat(Frontend::App::GetInstance().GetMainWindow().Get()));
+    for(u64 n=0;n<width*height;n++)
+    {
+        val = ((u16*)od)[n+(n/width)*(width+(opitch-(width*4))/2)];
+        r = ((((val >> 10) & 0x1F) * 527) + 23) >> 6;
+        g = ((((val >> 5)&0x1F) * 527) + 23) >> 6;//64
         b = (((val & 0x1F) * 527) + 23) >> 6;//32
         ((u32*)*nd)[n] = SDL_MapRGB(wFormat,r,g,b);
     }
@@ -151,7 +171,7 @@ static void video_refresh(const void *data, unsigned width, unsigned height, uns
             {
                 SDL_DestroyRenderer(g_rnd);
             }
-            g_rnd = SDL_CreateRenderer(Frontend::App::GetInstance().GetMainWindow().Get(),0,SDL_RENDERER_ACCELERATED|SDL_RENDERER_PRESENTVSYNC|SDL_RENDERER_TARGETTEXTURE);
+            g_rnd = SDL_CreateRenderer(Frontend::App::GetInstance().GetMainWindow().Get(),0,SDL_RENDERER_ACCELERATED|SDL_RENDERER_TARGETTEXTURE);
 
             ImGuiSDL::Deinitialize();
             ImGuiSDL::Initialize(renderer_get(),Frontend::App::GetInstance().GetMainWindow().GetWidth(),Frontend::App::GetInstance().GetMainWindow().GetHeight());
@@ -169,9 +189,13 @@ static void video_refresh(const void *data, unsigned width, unsigned height, uns
             SDL_SetTextureBlendMode(g_txt,SDL_BLENDMODE_BLEND);
             SDL_SetTextureBlendMode(g_screen,SDL_BLENDMODE_BLEND);
         }else{
-            if(g_format == SDL_PIXELFORMAT_RGB565)
+            if(pitch > width*4 && g_format == 0)
             {
-                Reformat(data,&g_srf->pixels,width,height,pitch);
+                ReformatRGB555t8888(data,&g_srf->pixels,width,height,pitch);
+                SDL_UpdateTexture(g_screen,NULL,g_srf->pixels,(width*4));
+            }else if(pitch > width*4)
+            {
+                ReformatRGB565t8888(data,&g_srf->pixels,width,height,pitch);
                 SDL_UpdateTexture(g_screen,NULL,g_srf->pixels,(width*4));
             }else{
                 SDL_UpdateTexture(g_screen,NULL,data,pitch);
@@ -418,8 +442,8 @@ static void core_input_poll(void) {
         //g_binds[0].k = Frontend::App::GetInstance().GetInput().GetButton(0,0);
         if(Frontend::App::GetInstance().GetInputMap(n)->IsPlugged())
         {
-            Frontend::App::GetInstance().GetInput().SetButton(n,RETRO_DEVICE_ID_JOYPAD_A,(bool)input[InputConf::MapUtil::MapIndex_A]||(bool)input[InputConf::MapUtil::MapIndex_CRight]);
-            Frontend::App::GetInstance().GetInput().SetButton(n,RETRO_DEVICE_ID_JOYPAD_B,(bool)input[InputConf::MapUtil::MapIndex_B]||(bool)input[InputConf::MapUtil::MapIndex_CDown]);
+            Frontend::App::GetInstance().GetInput().SetButton(n,RETRO_DEVICE_ID_JOYPAD_A,(bool)input[InputConf::MapUtil::MapIndex_CDown]);
+            Frontend::App::GetInstance().GetInput().SetButton(n,RETRO_DEVICE_ID_JOYPAD_B,(bool)input[InputConf::MapUtil::MapIndex_CRight]);
             Frontend::App::GetInstance().GetInput().SetButton(n,RETRO_DEVICE_ID_JOYPAD_X,(bool)input[InputConf::MapUtil::MapIndex_CLeft]);
             Frontend::App::GetInstance().GetInput().SetButton(n,RETRO_DEVICE_ID_JOYPAD_Y,(bool)input[InputConf::MapUtil::MapIndex_CUp]);
             Frontend::App::GetInstance().GetInput().SetButton(n,RETRO_DEVICE_ID_JOYPAD_DOWN,(bool)input[InputConf::MapUtil::MapIndex_YAxisDown]);
@@ -427,7 +451,13 @@ static void core_input_poll(void) {
             Frontend::App::GetInstance().GetInput().SetButton(n,RETRO_DEVICE_ID_JOYPAD_LEFT,(bool)input[InputConf::MapUtil::MapIndex_XAxisLeft]);
             Frontend::App::GetInstance().GetInput().SetButton(n,RETRO_DEVICE_ID_JOYPAD_RIGHT,(bool)input[InputConf::MapUtil::MapIndex_XAxisRight]);
             Frontend::App::GetInstance().GetInput().SetButton(n,RETRO_DEVICE_ID_JOYPAD_START,(bool)input[InputConf::MapUtil::MapIndex_Start]);
-            Frontend::App::GetInstance().GetInput().SetButton(n,RETRO_DEVICE_ID_JOYPAD_SELECT,(bool)input[InputConf::MapUtil::MapIndex_TrigZ]||(bool)input[InputConf::MapUtil::MapIndex_TrigR]||(bool)input[InputConf::MapUtil::MapIndex_TrigL]);
+            Frontend::App::GetInstance().GetInput().SetButton(n,RETRO_DEVICE_ID_JOYPAD_SELECT,(bool)input[InputConf::MapUtil::MapIndex_TrigZ]);
+            Frontend::App::GetInstance().GetInput().SetButton(n,RETRO_DEVICE_ID_JOYPAD_L,(bool)input[InputConf::MapUtil::MapIndex_DPadLeft]);
+            Frontend::App::GetInstance().GetInput().SetButton(n,RETRO_DEVICE_ID_JOYPAD_R,(bool)input[InputConf::MapUtil::MapIndex_DPadRight]);
+            Frontend::App::GetInstance().GetInput().SetButton(n,RETRO_DEVICE_ID_JOYPAD_L2,(bool)input[InputConf::MapUtil::MapIndex_DPadUp]);
+            Frontend::App::GetInstance().GetInput().SetButton(n,RETRO_DEVICE_ID_JOYPAD_R2,(bool)input[InputConf::MapUtil::MapIndex_DPadDown]);
+            Frontend::App::GetInstance().GetInput().SetButton(n,RETRO_DEVICE_ID_JOYPAD_L3,(bool)input[InputConf::MapUtil::MapIndex_TrigL]);
+            Frontend::App::GetInstance().GetInput().SetButton(n,RETRO_DEVICE_ID_JOYPAD_R3,(bool)input[InputConf::MapUtil::MapIndex_TrigR]);
         //    Frontend::App::GetInstance().GetInput().SetButton(0,RETRO_DEVICE_ID_JOYPAD_A,(bool)input[InputConf::MapUtil::MapIndex_A]);
         //    Frontend::App::GetInstance().GetInput().SetButton(0,RETRO_DEVICE_ID_JOYPAD_A,(bool)input[InputConf::MapUtil::MapIndex_A]);
         //    Frontend::App::GetInstance().GetInput().SetButton(0,RETRO_DEVICE_ID_JOYPAD_A,(bool)input[InputConf::MapUtil::MapIndex_A]);
@@ -478,9 +508,15 @@ static void core_present(void)
     SDL_RenderPresent(g_rnd);
 }
 
+static u64 _time = 0;
+static u64 _frame = 0;
+
 static void core_refresh(void)
 {
     // Update the game loop timer.
+    _frame = SDL_GetTicks()-_time;
+    if(_frame < 1000/60)
+        SDL_Delay((1000/60) - _frame);
     if (runloop_frame_time.callback) {
         retro_time_t current = cpu_features_get_time_usec();
         retro_time_t delta = current - runloop_frame_time_last;
@@ -494,6 +530,7 @@ static void core_refresh(void)
     if (audio_callback.callback) {
         audio_callback.callback();
     }
+    _time = SDL_GetTicks();
 }
 
 static bool core_is_running(void)

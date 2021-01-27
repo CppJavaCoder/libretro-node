@@ -8,12 +8,29 @@
 namespace InputConf
 {
 
-    InputMap::InputMap(ContTab *t) : ctab(t)
+    InputMap::InputMap(ContTab *t) : ctab(t), etab(nullptr)
+    {}
+    InputMap::InputMap(EventsTab *t) : etab(t), ctab(nullptr)
     {}
     InputMap::~InputMap()
-    {ctab=nullptr;}
+    {ctab=nullptr;etab=nullptr;}
 
     std::vector<u8> InputMap::Update()
+    {
+        if(ctab != nullptr)
+            return UpdateCtab();
+        if(etab != nullptr)
+            return UpdateEtab();
+        return {0};
+    }
+    bool InputMap::IsPlugged()
+    {
+        if(ctab == nullptr)
+            return false;
+        return ctab->m_plugged;
+    }
+
+    std::vector<u8> InputMap::UpdateCtab()
     {
         Uint8 *keybuf = (Uint8*)SDL_GetKeyboardState(NULL);
 
@@ -89,11 +106,11 @@ namespace InputConf
         }
         return output;
     }
-    bool InputMap::IsPlugged()
+    std::vector<u8> InputMap::UpdateEtab()
     {
-        if(ctab == nullptr)
-            return false;
-        return ctab->m_plugged;
+        std::vector<u8> output;
+        return output;
     }
+
 
 }

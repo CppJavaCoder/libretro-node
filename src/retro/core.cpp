@@ -131,7 +131,6 @@ void Core::Startup(const std::filesystem::path &config,const std::filesystem::pa
 {
     config_dir = config;
     data_dir = data;
-    SetSaveDir(data_dir);
 }
 void Core::Deinit()
 {
@@ -340,6 +339,7 @@ const std::filesystem::path Core::GetSaveDir()
 }
 void Core::SetSaveDir(const std::filesystem::path &path)
 {
+    Logger::Log(LogCategory::Info,"Save Dir",path.generic_string());
     save_dir = path;
 }
 void Core::AdvanceFrame()
