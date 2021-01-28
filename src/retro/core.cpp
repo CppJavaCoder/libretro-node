@@ -384,7 +384,7 @@ bool Core::LoadGameData()
     std::ifstream mfile;
     mfile.exceptions(0);
     std::string name = GetROMHeader();
-    mfile.open(save_dir/(name+"Data.dat"),std::ios::in|std::ios::trunc|std::ios::binary);
+    mfile.open(save_dir/(name+"Data.dat"),std::ios::in|std::ios::binary);
 
     Logger::Log(LogCategory::Debug,"Inner Marker","2");
     if(!mfile.is_open() || !mfile.good())

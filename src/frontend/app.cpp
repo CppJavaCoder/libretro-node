@@ -108,7 +108,7 @@ void App::InitVideo(const StartInfo& info)
     m_video.imgui.RebuildFontAtlas();
 
     Frontend::App::GetInstance().NewVIHandler();
-    Logger::Log(LogCategory::Debug, "VideoInit", "Exit");
+    //Logger::Log(LogCategory::Debug, "VideoInit", "Exit");
 }
 
 void App::DeinitVideo()
@@ -432,19 +432,19 @@ void App::Execute()
         {
             for(std::vector<RETRO::Sprite::Command>::iterator i = cmd.begin(); i != cmd.end(); i++)
             {
-                Logger::Log(LogCategory::Info,std::string("Command ") + std::to_string((*i).id),(*i).name);
+                //Logger::Log(LogCategory::Info,std::string("Command ") + std::to_string((*i).id),(*i).name);
                 if((*i).id < spr.size())
                     spr[(*i).id]->RunCommand(&(*i));
                 else
                 {
                     if((*i).name == "FromImage")
                     {
-                        Logger::Log(LogCategory::Info,"Command",(*i).name);
+                        //Logger::Log(LogCategory::Info,"Command",(*i).name);
                         CreateSprite((*i).param[0], (*i).iparam[0], (*i).iparam[1], (*i).iparam[2], (*i).iparam[3]);
                     }
                     else if((*i).name == "FromSprite")
                     {
-                        Logger::Log(LogCategory::Debug,"Command",(*i).name);
+                        //Logger::Log(LogCategory::Debug,"Command",(*i).name);
                         CreateSprite((*i).iparam[0]);
                     }
                     else
@@ -718,7 +718,7 @@ void App::BindingBeforeRender()
     if(SDL_SetRenderTarget(renderer_get(),texture_get())!=0)
     {
         g_resized = true;
-        Logger::Log(LogCategory::Info,"ARGH",std::string("WHY!?!? ") + SDL_GetError());
+        Logger::Log(LogCategory::Info,"Render",std::string("Failed to target texture, error:") + SDL_GetError());
     }
     /*  This is not possible until the day you can set Color Keys to streamed textures, alternating to plan B,
     Sadly it will only work for some games D; Luckily, games at/after SNES era, can probably make their own puppets
@@ -736,7 +736,7 @@ void App::BindingBeforeRender()
         if((*i)->GetFG())
         {
             xy++;
-            Logger::Log(LogCategory::Info,"Drawing Sprite FG",std::string("Sprite ") + std::to_string(xy));
+            //Logger::Log(LogCategory::Info,"Drawing Sprite FG",std::string("Sprite ") + std::to_string(xy));
             if(!(*i)->Draw())
                 queueReload = true;
         }
@@ -958,7 +958,7 @@ InputConf::InputMap *App::GetInputMap(int n)
 
 int App::CreateSprite(std::string fname,int w,int h,int cols,int rows)
 {
-    Logger::Log(LogCategory::Info,"The callback 1","Start!");
+    //Logger::Log(LogCategory::Info,"The callback 1","Start!");
     int index = spr.size();
     spr.push_back(new RETRO::Sprite(renderer_get()));
     if(!spr[index]->LoadFromImage(fname,w,h,cols,rows))
@@ -972,7 +972,7 @@ int App::CreateSprite(std::string fname,int w,int h,int cols,int rows)
 }
 int App::CreateSprite(SDL_Surface *srf,int w,int h,int cols,int rows)
 {
-    Logger::Log(LogCategory::Info,"The callback 2","Start!");
+    //Logger::Log(LogCategory::Info,"The callback 2","Start!");
     int index = spr.size();
     spr.push_back(new RETRO::Sprite(renderer_get()));
     if(!spr[index]->LoadFromSurface(srf,w,h,cols,rows))
@@ -984,7 +984,7 @@ int App::CreateSprite(SDL_Surface *srf,int w,int h,int cols,int rows)
 }
 int App::CreateSprite(void *pixels,int pitch,int w,int h,int cols,int rows)
 {
-    Logger::Log(LogCategory::Info,"The callback 3","Start!");
+    //Logger::Log(LogCategory::Info,"The callback 3","Start!");
     int index = spr.size();
     spr.push_back(new RETRO::Sprite(renderer_get()));
     if(!spr[index]->LoadFromBuffer(pixels,pitch,w,h,cols,rows))
@@ -999,7 +999,7 @@ int App::CreateSprite(int index)
     int nindex = spr.size();
     spr.push_back(new RETRO::Sprite());
     spr[nindex]->Copy(spr[index]);
-    Logger::Log(LogCategory::Debug,"Copying Sprite " + std::to_string(index),"To sprite " + std::to_string(nindex));
+    //Logger::Log(LogCategory::Debug,"Copying Sprite " + std::to_string(index),"To sprite " + std::to_string(nindex));
     return nindex;
 }
 RETRO::Sprite *App::GetSprite(int index)

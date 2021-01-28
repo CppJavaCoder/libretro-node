@@ -18,7 +18,6 @@ namespace RETRO
     }
     void Sprite::Copy(const Sprite *spr)
     {
-        Logger::Log(LogCategory::Debug,"Mark","1");
         //srf = spr.srf;
         //txt = spr.txt;
         par = (Sprite*)spr;
@@ -28,7 +27,6 @@ namespace RETRO
         pos.y = spr->pos.y;
         pos.w = spr->pos.w;
         pos.h = spr->pos.h;
-        Logger::Log(LogCategory::Debug,"Mark","2");
         frame_current = spr->frame_current;
         tick_count = spr->tick_count;
         free_surf = false;
@@ -36,11 +34,9 @@ namespace RETRO
         vflip = spr->vflip;
         isFG = spr->isFG;
         clip = spr->clip;
-        Logger::Log(LogCategory::Debug,"Mark","3");
     }
     Sprite::~Sprite()
     {
-        Logger::Log(LogCategory::Debug,"Sprite","Destructor Called");
         rnd = NULL;
         if(txt != NULL)
         {
@@ -263,8 +259,8 @@ namespace RETRO
             SetFG(c->iparam[0]);
         else if(c->name == "SetClip")
             SetClip(c->iparam[0],c->iparam[1],c->iparam[2],c->iparam[3]);
-        else
-            Logger::Log(LogCategory::Info,"Unidentified Command",c->name);
+//        else
+  //          Logger::Log(LogCategory::Info,"Unidentified Command",c->name);
     }
     void Sprite::Reload(SDL_Renderer *r)
     {

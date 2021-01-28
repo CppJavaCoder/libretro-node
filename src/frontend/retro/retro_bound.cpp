@@ -532,8 +532,11 @@ static void core_refresh(void)
 {
     // Update the game loop timer.
     _frame = SDL_GetTicks()-_time;
+    //Logger::Log(LogCategory::Debug,"Numb",std::to_string(SDL_GetQueuedAudioSize(g_pcm)));
     if(_frame < (1000/60))
         std::this_thread::sleep_for(std::chrono::milliseconds((1000/60) - _frame));//SDL_Delay((1000/59) - _frame);
+    while(SDL_GetQueuedAudioSize(g_pcm) > 14400)
+        std::chrono::milliseconds(4);
     if (runloop_frame_time.callback) {
         retro_time_t current = cpu_features_get_time_usec();
         retro_time_t delta = current - runloop_frame_time_last;
