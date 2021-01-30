@@ -162,12 +162,61 @@ namespace RETRO
     }
     void Sprite::ReplaceColor(int r1,int g1,int b1,int r2,int g2,int b2)
     {
-        for(int n=0;n<srf->w*srf->h;n++)
+        Uint32 scol = SDL_MapRGB(srf->format,r1,g1,b1);
+        Uint32 _v=0;
+        bool found = false;
+        for(Uint32 n=0;n<fpal.size();n++)
         {
-            Uint8 r,g,b;
-            SDL_GetRGB(((Uint32*)srf->pixels)[n],srf->format,&r,&g,&b);
-            ((Uint32*)srf->pixels)[n] = SDL_MapRGB(srf->format,r2,g2,b2);
+            if(fpal[n] == scol)
+            {
+                tpal[n] = SDL_MapRGB(srf->format,r2,g2,b2);
+                found = true;
+                _v = n;
+                continue;
+            }
         }
+        if(!found)
+        {
+            _v = fpal.size();
+            fpal.push_back(SDL_MapRGB(srf->format,r1,g1,b1));
+            tpal.push_back(SDL_MapRGB(srf->format,r2,g2,b2));
+            cpal.push_back(fpal[_v]);
+        }
+        QuickReplace(_v);
+    }
+    void Sprite::QuickReplace(Uint32 _v,bool fromOrig)
+    {
+        Uint8 r1,g1,b1;
+        Uint8 r2,g2,b2;
+        SDL_Surface *nsrf;
+        if(!fromOrig)
+            SDL_GetRGB(cpal[_v],srf->format,&r1,&g1,&b1);
+        else
+            SDL_GetRGB(fpal[_v],srf->format,&r1,&g1,&b1);
+        SDL_GetRGB(tpal[_v],srf->format,&r2,&g2,&b2);
+        nsrf = SDL_CreateRGBSurfaceWithFormat(SDL_SWSURFACE,srf->w,srf->h,24,srf->format->format);
+        if(!nsrf)
+            return;
+        SDL_FillRect(nsrf,NULL,SDL_MapRGB(srf->format,r2,g2,b2));
+        SDL_SetColorKey(srf,1,SDL_MapRGB(srf->format,r1,g1,b1));
+        if(SDL_BlitSurface(srf,NULL,nsrf,NULL) != 0)
+        {
+            Logger::Log(LogCategory::Error,"Sprite","Failed to replace color!");
+            SDL_FreeSurface(nsrf);
+            return;
+        }
+        if(free_surf)
+            SDL_FreeSurface(srf);
+        srf = nsrf;
+        SDL_SetColorKey(srf,1,SDL_MapRGB(srf->format,255,0,255));
+        free_surf = true;
+        nsrf = NULL;
+        if(txt != NULL)
+            SDL_DestroyTexture(txt);
+        txt = SDL_CreateTextureFromSurface(rnd,srf);
+        if(!txt)
+            return;
+        cpal[_v] = tpal[_v];
     }
     int Sprite::GetX()
     {
@@ -275,6 +324,10 @@ namespace RETRO
             free_surf = false;
             LoadFromSurface(srf,pos.w,pos.h,cols,rows);
             free_surf = olfs;
+        }
+        for(Uint32 n=0;n<fpal.size();n++)
+        {
+            QuickReplace(n,true);
         }
     }
 }

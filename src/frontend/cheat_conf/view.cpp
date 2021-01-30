@@ -172,7 +172,9 @@ void View::ShowTreeNodeOptions(RETRO::Cheat::Entry& entry, RETRO::Cheat::Entry* 
             if (ImGui::MenuItem(name.c_str(), nullptr, &selected)) {
                 if (entry.enabled && entry.option.has_value()) {
                     auto curr_cheat_name = fmt::format("C{:X}_{}", entry.id, entry.option.value());
-                    //m_core->SetCheatEnabled(curr_cheat_name, false);
+                    std::string cd = std::to_string(entry.codes[entry.id-1000001].value).c_str();
+                    std::string addr = std::to_string(entry.codes[entry.id-1000001].address).c_str();
+                    m_core->CheatSet(entry.id-1000001, false, (cd + " " + addr).c_str());
                 }
 
                 entry.option = name;
@@ -189,12 +191,16 @@ void View::ShowTreeNodeOptions(RETRO::Cheat::Entry& entry, RETRO::Cheat::Entry* 
 
                 if (selected) {
                     //m_core->AddCheat(cheat_name, codes.data(), codes.size());
-                    //m_core->SetCheatEnabled(cheat_name, selected);
+                    std::string cd = std::to_string(entry.codes[entry.id-1000001].value).c_str();
+                    std::string addr = std::to_string(entry.codes[entry.id-1000001].address).c_str();
+                    m_core->CheatSet(entry.id-1000001, selected, (cd + " " + addr).c_str());
                 }
                 else {
                     entry.option = std::nullopt;
                     entry.enabled = false;
-                    //m_core->SetCheatEnabled(cheat_name, false);
+                    std::string cd = std::to_string(entry.codes[entry.id-1000001].value).c_str();
+                    std::string addr = std::to_string(entry.codes[entry.id-1000001].address).c_str();
+                    m_core->CheatSet(entry.id-1000001, entry.enabled, (cd + " " + addr).c_str());
                 }
             }
 
@@ -231,9 +237,15 @@ void View::ShowTreeNodeSingle(RETRO::Cheat::Entry& entry, RETRO::Cheat::Entry* p
     if (ImGui::MenuItem(entry.name.c_str(), nullptr, &entry.enabled)) {
         if (!entry.codes.empty()) {
             if (entry.enabled)
-                ;//m_core->AddCheat(cheat_name, entry.codes.data(), entry.codes.size());
+            {
+                std::string cd = std::to_string(entry.codes[entry.id-1000001].value).c_str();
+                std::string addr = std::to_string(entry.codes[entry.id-1000001].address).c_str();
+                m_core->CheatSet(entry.id-1000001, entry.enabled, (cd + " " + addr).c_str());
+            }
 
-            //m_core->SetCheatEnabled(cheat_name, entry.enabled);
+            std::string cd = std::to_string(entry.codes[entry.id-1000001].value).c_str();
+            std::string addr = std::to_string(entry.codes[entry.id-1000001].address).c_str();
+            m_core->CheatSet(entry.id-1000001, entry.enabled, (cd + " " + addr).c_str());
         }
         else
             entry.enabled = false;

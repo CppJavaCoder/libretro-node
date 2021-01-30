@@ -190,8 +190,24 @@ void Core::CheatReset()
 }
 void Core::CheatSet(unsigned index, bool enabled, const char *code)
 {
-    Logger::Log(LogCategory::Debug,std::string("Cheat Code ")+std::to_string(index)+" "+code,std::string("Is ") + (enabled ? "Enabled" : "Disabled"));
-    m_retro.retro_cheat_set(index,enabled,code);
+    std::string copy(code);
+    std::string partA = copy.substr(0,copy.find_last_of(" "));
+    std::string partB = copy.substr(copy.find_last_of(" ")+1);
+
+    Logger::Log(LogCategory::Debug,std::string("Any Questions?"),"Well then");
+    Logger::Log(LogCategory::Debug,std::string("Cheat Code"),std::string("Is ") + (enabled ? "Enabled" : "Disabled"));
+    std::stringstream hex1, hex2;
+    hex1 << std::hex << std::atoi(partA.c_str());
+    hex2 << std::hex << std::atoi(partB.c_str());
+    std::string codeA = hex1.str();
+    std::string codeB = hex2.str();
+    while(codeA.size() < 4)
+        codeA = "0" + codeA;
+    while(codeB.size() < 4)
+        codeB = "0" + codeB;
+    std::string cCode(codeB + ":" + codeA);
+    Logger::Log(LogCategory::Debug,std::string("Cheat Code"),cCode);
+    m_retro.retro_cheat_set(index,enabled,cCode.c_str());
 }
 bool Core::LoadGame(const std::string &s)
 {

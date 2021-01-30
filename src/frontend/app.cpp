@@ -300,9 +300,6 @@ void App::SaveCheats()
 void App::LoadROMCheats()
 {
     // Yet to be implemented
-    
-    RETRO::Core::RetroHeader header;
-    m_emu.core.GetRetroHeader(&header);
     //m64p_rom_settings settings;
     //m_emu.core.GetROMSettings(&settings);
 
@@ -317,7 +314,7 @@ void App::LoadROMCheats()
     else {
         m_cheats.block = &m_cheats.map[crc];
         m_cheats.block->crc = crc;
-        m_cheats.block->good_name = "Zelda";
+        m_cheats.block->good_name = crc;
     }
 
     if (auto it = m_cheats.user_map.find(crc); it != m_cheats.user_map.end()) {
@@ -326,7 +323,7 @@ void App::LoadROMCheats()
     else {
         m_cheats.user_block = &m_cheats.user_map[crc];
         m_cheats.user_block->crc = crc;
-        m_cheats.user_block->good_name = "Zelda";
+        m_cheats.user_block->good_name = crc;
     }
 }
 
@@ -401,7 +398,6 @@ void App::Startup(const StartInfo& info)
     InitEmu(info);
     Logger::Log(LogCategory::Debug, "Startup", "Done");
     CoreStartedHandler();
-    LoadCheats();
 
     CreateResourcesNextVi();
     Logger::Log(LogCategory::Debug, "Startup", "Exit");
@@ -426,6 +422,7 @@ void App::Execute()
         //while(!m_emu.core.GameLoaded());
         Logger::Log(LogCategory::Info,"Marker","3");
         m_emu.core.LoadGameData();
+        LoadCheats();
         Logger::Log(LogCategory::Info,"Marker","4");
         //m_emu.notify_started = true;
         while(core_is_running() && m_video.window.Get())

@@ -47,6 +47,7 @@ namespace RETRO
             void RunCommand(Command *c);
 
         private:
+            void QuickReplace(Uint32,bool fromOrig = false);
             SDL_Renderer *rnd;
             SDL_Surface *srf;
             SDL_Texture *txt;
@@ -60,6 +61,9 @@ namespace RETRO
             Sprite *par;
             int xoff,yoff;
             std::string fname;
+            std::vector<Uint32> fpal;
+            std::vector<Uint32> tpal;
+            std::vector<Uint32> cpal;
     };
 
 }

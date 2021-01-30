@@ -233,7 +233,7 @@ void Edit::DisableEntry()
         else
             cheat_name = fmt::format("C{:X}", m_entry->id);
 
-        //m_core->SetCheatEnabled(cheat_name, false);
+        m_core->CheatSet(m_entry->id, false, cheat_name.c_str());
 
         m_entry->enabled = false;
         m_entry->option = std::nullopt;
